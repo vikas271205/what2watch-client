@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import MovieCard from "../components/MovieCard";
 
+
+
+
 function ChatAssistant() {
   const [messages, setMessages] = useState([
     { text: "👋 Hi! I'm your movie assistant. Ask me anything!", sender: "bot" }
@@ -26,7 +29,7 @@ function ChatAssistant() {
 
 
 
-const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/chat`, {
+const res = await fetch(`https://what2watch-server.onrender.com/api/chat`, {
 
 
 

@@ -20,7 +20,7 @@ function Home() {
       {/* <section className="px-4 sm:px-6 md:px-10 py-6">
         <TodayPick />
       </section> */}
-
+      
       <section className="px-4 sm:px-6 md:px-10 py-6">
         <TrendingSection />
       </section>

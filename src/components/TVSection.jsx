@@ -1,16 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function TVSection() {
   const [tvShows, setTVShows] = useState([]);
   const [genreMap, setGenreMap] = useState({});
   const scrollRef = useRef();
 
-  // 🔹 Fetch TV genres from backend
+  // 🔹 Fetch TV genres
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const res = await fetch("/api/tmdb/genre/tv");
+        const res = await fetch(`${API_BASE}/api/tmdb/genre/tv`);
         const data = await res.json();
         const map = {};
         data.genres.forEach((g) => {
@@ -25,11 +26,11 @@ function TVSection() {
     fetchGenres();
   }, []);
 
-  // 🔹 Fetch trending TV shows from backend
+  // 🔹 Fetch trending TV shows
   useEffect(() => {
     const fetchTrendingTV = async () => {
       try {
-        const res = await fetch("/api/tmdb/trending?time=week");
+        const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
         const data = await res.json();
 
         const tvOnly = data.filter(
@@ -57,7 +58,7 @@ function TVSection() {
     }
   }, [genreMap]);
 
-  // 🔄 Infinite auto-scroll
+  // 🔄 Auto-scroll
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;

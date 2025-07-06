@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
 import genreMap from "../utils/GenreMap";
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL || "";
+
 function HollywoodSection() {
   const [movies, setMovies] = useState([]);
   const scrollRef = useRef();
@@ -9,7 +11,7 @@ function HollywoodSection() {
   useEffect(() => {
     const fetchHollywood = async () => {
       try {
-        const res = await fetch("/api/tmdb/discover/hollywood");
+        const res = await fetch(`${API_BASE}/api/tmdb/discover/hollywood`);
         const data = await res.json();
 
         const selected = data
@@ -63,6 +65,7 @@ function HollywoodSection() {
   return (
     <div className="mb-10">
       <h2 className="text-2xl font-bold mb-4">🎬 Hollywood Movies</h2>
+
       <div
         ref={scrollRef}
         className="flex gap-4 overflow-x-auto no-scrollbar pb-2"

@@ -1,59 +1,36 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
 
-function TVSection() {
-  const [tvShows, setTVShows] = useState([]);
-  const [genreMap, setGenreMap] = useState({});
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
+function BollywoodSection() {
+  const [movies, setMovies] = useState([]);
   const scrollRef = useRef();
 
-  // 🔹 Fetch TV genres from backend
   useEffect(() => {
-    const fetchGenres = async () => {
+    const fetchBollywoodMovies = async () => {
       try {
-        const res = await fetch("/api/tmdb/genre/tv");
-        const data = await res.json();
-        const map = {};
-        data.genres.forEach((g) => {
-          map[g.id] = g.name;
-        });
-        setGenreMap(map);
-      } catch (err) {
-        console.error("Failed to fetch TV genres:", err);
-      }
-    };
-
-    fetchGenres();
-  }, []);
-
-  // 🔹 Fetch trending TV shows from backend
-  useEffect(() => {
-    const fetchTrendingTV = async () => {
-      try {
-        const res = await fetch("/api/tmdb/trending?time=week");
+        const res = await fetch(`${API_BASE}/api/tmdb/discover/bollywood`);
         const data = await res.json();
 
-        const tvOnly = data.filter((item) => item.media_type === "tv" && item.poster_path);
-
-        const shuffled = tvOnly
+        const filtered = data
+          .filter((item) => item.poster_path)
           .sort(() => 0.5 - Math.random())
           .slice(0, 15);
 
-        const enriched = shuffled.map((tv) => ({
-          ...tv,
-          genre_names: tv.genre_ids.map((id) => genreMap[id]).filter(Boolean),
+        const formatted = filtered.map((movie) => ({
+          ...movie,
+          genre_names: [], // Optionally fetch genre names later
         }));
 
-        setTVShows(enriched);
+        setMovies(formatted);
       } catch (err) {
-        console.error("Failed to fetch trending TV shows:", err);
-        setTVShows([]);
+        console.error("Failed to fetch Bollywood movies:", err);
       }
     };
 
-    if (Object.keys(genreMap).length > 0) {
-      fetchTrendingTV();
-    }
-  }, [genreMap]);
+    fetchBollywoodMovies();
+  }, []);
 
   // 🔄 Auto-scroll
   useEffect(() => {
@@ -84,30 +61,30 @@ function TVSection() {
       container.removeEventListener("mouseenter", pause);
       container.removeEventListener("mouseleave", resume);
     };
-  }, [tvShows]);
+  }, [movies]);
 
   return (
     <div className="mb-10">
-      <h2 className="text-2xl font-bold mb-4">🔥 Trending TV Shows This Week</h2>
+      <h2 className="text-2xl font-bold mb-4">🇮🇳 Popular Bollywood Movies</h2>
 
-      {tvShows.length === 0 ? (
-        <p className="text-gray-400 text-sm">No TV shows found.</p>
+      {movies.length === 0 ? (
+        <p className="text-gray-400 text-sm">No Bollywood movies found.</p>
       ) : (
         <div
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto no-scrollbar pb-2"
         >
-          {[...tvShows, ...tvShows].map((tv, index) => (
+          {[...movies, ...movies].map((movie, index) => (
             <MovieCard
-              key={`${tv.id}_${index}`}
-              id={tv.id}
-              title={tv.name}
-              imageUrl={`https://image.tmdb.org/t/p/w300${tv.poster_path}`}
-              publicRating={tv.vote_average}
+              key={`${movie.id}_${index}`}
+              id={movie.id}
+              title={movie.title}
+              imageUrl={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
+              publicRating={movie.vote_average}
               size="small"
-              genres={tv.genre_names}
-              isTV={true}
-              language={tv.original_language}
+              genres={movie.genre_names}
+              isTV={false}
+              language={movie.original_language}
             />
           ))}
         </div>
@@ -116,4 +93,4 @@ function TVSection() {
   );
 }
 
-export default TVSection;
+export default BollywoodSection;

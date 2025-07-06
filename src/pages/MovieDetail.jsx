@@ -35,50 +35,54 @@ function MovieDetail() {
     window.scrollTo(0, 0);
 
     const fetchAll = async () => {
-      const res = await fetch(`${API_BASE}/api/tmdb/movie/${id}`);
-      const movieData = await res.json();
-      setMovie(movieData);
+      try {
+        const res = await fetch(`${API_BASE}/api/tmdb/movie/${id}`);
+        const movieData = await res.json();
+        setMovie(movieData);
 
-      const releaseYear = movieData.release_date?.slice(0, 4);
-      const streamingRes = await fetch(`${API_BASE}/api/watchmode/id?title=${encodeURIComponent(movieData.title)}&year=${releaseYear}`);
-      const { id: watchmodeId } = await streamingRes.json();
+        const releaseYear = movieData.release_date?.slice(0, 4);
+        const streamingRes = await fetch(`${API_BASE}/api/watchmode/id?title=${encodeURIComponent(movieData.title)}&year=${releaseYear}`);
+        const { id: watchmodeId } = await streamingRes.json();
 
-      if (watchmodeId) {
-        const sourcesRes = await fetch(`${API_BASE}/api/watchmode/sources/${watchmodeId}`);
-        const sources = await sourcesRes.json();
-        setPlatforms(sources);
+        if (watchmodeId) {
+          const sourcesRes = await fetch(`${API_BASE}/api/watchmode/sources/${watchmodeId}`);
+          const sources = await sourcesRes.json();
+          setPlatforms(sources);
+        }
+
+        const omdb = await fetchOMDbData(movieData.title);
+        setOmdbData(omdb);
+
+        const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
+        const trailerData = await trailerRes.json();
+        const trailer = trailerData.results.find((v) => v.type === "Trailer" && v.site === "YouTube");
+        if (trailer) setTrailerUrl(`https://www.youtube.com/embed/${trailer.key}`);
+
+        const castRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`);
+        const castData = await castRes.json();
+        setCast(castData.cast.slice(0, 8));
+
+        const similarRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`);
+        const similarData = await similarRes.json();
+        setRelatedMovies(similarData.results.slice(0, 10));
+
+        if (user) {
+          const watchRef = doc(db, "watchlists", `${user.uid}_${id}`);
+          const watchSnap = await getDoc(watchRef);
+          setIsSaved(watchSnap.exists());
+
+          const rateRef = doc(db, "ratings", `${user.uid}_${id}`);
+          const rateSnap = await getDoc(rateRef);
+          if (rateSnap.exists()) setUserRating(rateSnap.data().rating);
+        }
+
+        const q = query(collection(db, "comments"), where("movieId", "==", id));
+        const snapshot = await getDocs(q);
+        const commentData = snapshot.docs.map(doc => doc.data()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setAllComments(commentData);
+      } catch (err) {
+        console.error("Failed to fetch movie details:", err);
       }
-
-      const omdb = await fetchOMDbData(movieData.title);
-      setOmdbData(omdb);
-
-      const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
-      const trailerData = await trailerRes.json();
-      const trailer = trailerData.results.find((v) => v.type === "Trailer" && v.site === "YouTube");
-      if (trailer) setTrailerUrl(`https://www.youtube.com/embed/${trailer.key}`);
-
-      const castRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`);
-      const castData = await castRes.json();
-      setCast(castData.cast.slice(0, 8));
-
-      const similarRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`);
-      const similarData = await similarRes.json();
-      setRelatedMovies(similarData.results.slice(0, 10));
-
-      if (user) {
-        const watchRef = doc(db, "watchlists", `${user.uid}_${id}`);
-        const watchSnap = await getDoc(watchRef);
-        setIsSaved(watchSnap.exists());
-
-        const rateRef = doc(db, "ratings", `${user.uid}_${id}`);
-        const rateSnap = await getDoc(rateRef);
-        if (rateSnap.exists()) setUserRating(rateSnap.data().rating);
-      }
-
-      const q = query(collection(db, "comments"), where("movieId", "==", id));
-      const snapshot = await getDocs(q);
-      const commentData = snapshot.docs.map(doc => doc.data()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setAllComments(commentData);
     };
 
     fetchAll();

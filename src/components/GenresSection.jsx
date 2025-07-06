@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
 function GenresSection() {
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,11 +11,10 @@ function GenresSection() {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const res = await fetch("/api/tmdb/genres");
+        const res = await fetch(`${API_BASE}/api/tmdb/genres`);
         const data = await res.json();
-        // Support both [{id,name},…] or { genres:[…] }
         const list = Array.isArray(data) ? data : data.genres || [];
-        setGenres(list.slice(0, 6));      // show top 6
+        setGenres(list.slice(0, 6)); // show top 6
       } catch (err) {
         console.error("Failed to fetch genres:", err);
         setError("Could not load genres 😕");
@@ -26,7 +27,7 @@ function GenresSection() {
   }, []);
 
   if (loading) return <p className="text-gray-400 text-sm">Loading genres…</p>;
-  if (error)   return <p className="text-red-400 text-sm">{error}</p>;
+  if (error) return <p className="text-red-400 text-sm">{error}</p>;
 
   return (
     <div>
@@ -41,7 +42,7 @@ function GenresSection() {
         {genres.map((genre) => (
           <Link
             key={genre.id}
-            to={`/genres?g=${genre.id}`}   /* ready for filtered view */
+            to={`/genres?g=${genre.id}`}
             className="px-4 py-2 rounded bg-gray-800 text-sm hover:bg-blue-600 transition"
           >
             {genre.name}

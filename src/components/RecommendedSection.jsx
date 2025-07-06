@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import MovieCard from "../components/MovieCard";
 import { calculateUncleScore } from "../utils/uncleScore";
 import genreMap from "../utils/GenreMap";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function Recommended() {
   const [recommended, setRecommended] = useState([]);
@@ -11,13 +12,13 @@ function Recommended() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/tmdb/discover");
+        const res = await fetch(`${API_BASE}/api/tmdb/discover`);
         const data = await res.json();
         const shuffled = data.sort(() => 0.5 - Math.random());
 
-        const top30 = shuffled.filter(
-          (item) => item.poster_path && item.title || item.name
-        ).slice(0, 30);
+        const top30 = shuffled
+          .filter((item) => item.poster_path && (item.title || item.name))
+          .slice(0, 30);
 
         const results = await Promise.allSettled(
           top30.map(async (item) => {
@@ -26,13 +27,22 @@ function Recommended() {
             const language = item.original_language;
 
             try {
-              const omdbRes = await fetch(`/api/omdb?title=${encodeURIComponent(title)}`);
+              const omdbRes = await fetch(
+                `${API_BASE}/api/omdb?title=${encodeURIComponent(title)}`
+              );
               const omdb = await omdbRes.json();
 
-              const rtRating = omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value;
+              const rtRating = omdb?.Ratings?.find(
+                (r) => r.Source === "Rotten Tomatoes"
+              )?.Value;
               const imdbRating = omdb?.imdbRating;
 
-              const uncleScore = calculateUncleScore(rating, imdbRating, rtRating);
+              const uncleScore = calculateUncleScore(
+                rating,
+                imdbRating,
+                rtRating
+              );
+
               if (uncleScore >= 7.5) {
                 return {
                   id: item.id,
@@ -47,6 +57,7 @@ function Recommended() {
             } catch (err) {
               console.warn("OMDb failed:", title, err);
             }
+
             return null;
           })
         );

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL || "";
+
 function Hero() {
   const [heroMovie, setHeroMovie] = useState(null);
   const [query, setQuery] = useState("");
@@ -9,11 +11,13 @@ function Hero() {
   useEffect(() => {
     const fetchHeroMovie = async () => {
       try {
-        const res = await fetch("/api/tmdb/trending?time=week");
+        const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
         const data = await res.json();
-        const topMovie = data
-          ?.filter((item) => item.media_type === "movie" && item.backdrop_path)
-          ?.sort(() => 0.5 - Math.random())[0];
+
+        const topMovie =
+          data
+            ?.filter((item) => item.media_type === "movie" && item.backdrop_path)
+            .sort(() => 0.5 - Math.random())[0] || null;
 
         setHeroMovie(topMovie);
       } catch (err) {

@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { calculateUncleScore } from "../utils/uncleScore";
 import languageMap from "../utils/LanguageMap";
-import genreMap from "../utils/GenreMap";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function MovieCard({
   id,
@@ -55,10 +55,14 @@ function MovieCard({
       if (!showUncleScore || !title || publicRating == null) return;
 
       try {
-        const res = await fetch(`/api/omdb?title=${encodeURIComponent(title)}`);
+        const res = await fetch(
+          `${API_BASE}/api/omdb?title=${encodeURIComponent(title)}`
+        );
         const omdb = await res.json();
 
-        const rtRating = omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value;
+        const rtRating = omdb?.Ratings?.find(
+          (r) => r.Source === "Rotten Tomatoes"
+        )?.Value;
         const imdbRating = omdb?.imdbRating;
 
         const score = calculateUncleScore(publicRating, imdbRating, rtRating);
@@ -156,11 +160,10 @@ function MovieCard({
           )}
 
           {genres.length > 0 && (
-  <p className="text-gray-400 truncate">
-    {genres.slice(0, 2).join(", ")}
-  </p>
-)}
-
+            <p className="text-gray-400 truncate">
+              {genres.slice(0, 2).join(", ")}
+            </p>
+          )}
         </div>
       </div>
     </div>

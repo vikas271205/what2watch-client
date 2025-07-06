@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function TrendingSection() {
   const [movies, setMovies] = useState([]);
@@ -10,7 +11,7 @@ function TrendingSection() {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const res = await fetch("/api/tmdb/genres");
+        const res = await fetch(`${API_BASE}/api/tmdb/genres`);
         const data = await res.json();
         const map = {};
         data.forEach((g) => {
@@ -25,11 +26,11 @@ function TrendingSection() {
     fetchGenres();
   }, []);
 
-  // 🔹 Fetch trending movies from backend
+  // 🔹 Fetch trending movies
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const res = await fetch("/api/tmdb/trending?time=week");
+        const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
         const data = await res.json();
 
         const filtered = data
