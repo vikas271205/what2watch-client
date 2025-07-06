@@ -9,42 +9,31 @@ import HollywoodSection from "../components/HollywoodSection";
 import BollywoodSection from "../components/BollywoodSection";
 import HeroSection from "../components/HeroSection";
 import Hero from "../components/Hero";
+
 function Home() {
   return (
-    <main className="bg-white text-black dark:bg-zinc-900 dark:text-white">
-      
-
-  {/* Your existing sections: Trending, TV Shows, etc. */}
-
-<Hero/>
-      {/* <section className="px-4 sm:px-6 md:px-10 py-6">
-        <TodayPick />
-      </section> */}
-      
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+    <main className="bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white min-h-screen">
+      <Hero />
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <TrendingSection />
       </section>
 
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <TVSection />
       </section>
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <HollywoodSection />
       </section>
 
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <BollywoodSection />
       </section>
       
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <RecommendedSection />
       </section>
 
-      {/* <section className="px-4 sm:px-6 md:px-10 py-6">
-        <GenresSection />
-      </section> */}
-
-      <section className="px-4 sm:px-6 md:px-10 py-6">
+      <section className="px-2 sm:px-4 md:px-6 lg:px-10 py-4 sm:py-6">
         <NewsletterSection />
       </section>
 

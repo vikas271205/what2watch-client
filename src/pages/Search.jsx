@@ -14,6 +14,8 @@ import {
 } from "firebase/firestore";
 import MovieCard from "../components/MovieCard";
 import genreMap from "../utils/GenreMap";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
 
 function Search() {
   const location = useLocation();
@@ -64,7 +66,8 @@ function Search() {
   useEffect(() => {
     const fetchRandomMovies = async () => {
       const randomPage = Math.floor(Math.random() * 10) + 1;
-      const res = await fetch(`/api/tmdb/discover?page=${randomPage}`);
+      const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
+
       const data = await res.json();
       const filtered = data.filter((m) => m.adult === false);
       setResults(filtered);
@@ -82,7 +85,8 @@ function Search() {
         return;
       }
 
-      const res = await fetch(`/api/tmdb/search?q=${queryText}`);
+      const res = await fetch(`${API_BASE}/api/tmdb/search?q=${queryText}`);
+
       const data = await res.json();
       const movieTvSuggestions = (data.results || []).filter(
         (item) =>
@@ -97,7 +101,8 @@ function Search() {
   }, [queryText, inputFocused]);
 
   const searchTMDB = async (term) => {
-    const res = await fetch(`/api/tmdb/search?q=${term}`);
+    const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
+
     const data = await res.json();
     const filtered = (data.results || []).filter(
       (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult

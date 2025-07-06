@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import MovieCard from "../components/MovieCard";
 import { calculateUncleScore } from "../utils/uncleScore";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function Recommended() {
   const [recommended, setRecommended] = useState([]);
@@ -8,7 +9,8 @@ function Recommended() {
 
   useEffect(() => {
     const fetchGenres = async () => {
-      const res = await fetch("/api/tmdb/genres");
+      const res = await fetch(`${API_BASE}/api/tmdb/genres`);
+
       const data = await res.json();
       const genreMap = {};
       data.forEach((g) => (genreMap[g.id] = g.name));
@@ -20,7 +22,8 @@ function Recommended() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch("/api/tmdb/discover");
+      const res = await fetch(`${API_BASE}/api/tmdb/discover`);
+
       const data = await res.json();
       const filtered = [];
 
@@ -30,7 +33,8 @@ function Recommended() {
         if (!title || !rating) continue;
 
         try {
-          const omdbRes = await fetch(`/api/omdb?title=${encodeURIComponent(title)}`);
+          const omdbRes = await fetch(`${API_BASE}/api/omdb?title=${encodeURIComponent(title)}`);
+
           const omdb = await omdbRes.json();
 
           const rtRating = omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value;

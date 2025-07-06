@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import MovieCard from "../components/MovieCard";
-
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 function TVShows() {
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState(null);
@@ -10,7 +10,8 @@ function TVShows() {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const res = await fetch("/api/tmdb/genre/tv");
+        const res = await fetch(`${API_BASE}/api/tmdb/genre/tv`);
+
         const data = await res.json();
         setGenres(data.genres);
         if (data.genres.length > 0) {
@@ -30,7 +31,8 @@ function TVShows() {
 
       setLoading(true);
       try {
-        const res = await fetch(`/api/tmdb/discover/tv?with_genres=${selectedGenre.id}`);
+        const res = await fetch(`${API_BASE}/api/tmdb/discover/tv?with_genres=${selectedGenre.id}`);
+
         const data = await res.json();
         setTVShows(data.results.slice(0, 20));
       } catch (err) {

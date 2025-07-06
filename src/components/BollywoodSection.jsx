@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
+import genreMap from "../utils/GenreMap";
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
@@ -11,6 +12,7 @@ function BollywoodSection() {
     const fetchBollywoodMovies = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/tmdb/discover/bollywood`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
 
         const filtered = data
@@ -20,19 +22,19 @@ function BollywoodSection() {
 
         const formatted = filtered.map((movie) => ({
           ...movie,
-          genre_names: [], // Optionally fetch genre names later
+          genre_names: movie.genre_ids.map((id) => genreMap[id] || "Unknown"),
         }));
 
         setMovies(formatted);
       } catch (err) {
         console.error("Failed to fetch Bollywood movies:", err);
+        setMovies([]);
       }
     };
 
     fetchBollywoodMovies();
   }, []);
 
-  // 🔄 Auto-scroll
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -64,15 +66,15 @@ function BollywoodSection() {
   }, [movies]);
 
   return (
-    <div className="mb-10">
-      <h2 className="text-2xl font-bold mb-4">🇮🇳 Popular Bollywood Movies</h2>
+    <div className="mb-6 sm:mb-10">
+      <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4">🇮🇳 Popular Bollywood Movies</h2>
 
       {movies.length === 0 ? (
         <p className="text-gray-400 text-sm">No Bollywood movies found.</p>
       ) : (
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto no-scrollbar pb-2"
+          className="flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar pb-1 sm:pb-2"
         >
           {[...movies, ...movies].map((movie, index) => (
             <MovieCard

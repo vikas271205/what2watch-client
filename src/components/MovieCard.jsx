@@ -34,10 +34,11 @@ function MovieCard({
   const db = getFirestore();
   const user = auth.currentUser;
 
-  const width =
-    size === "large"
-      ? "min-w-[160px] sm:min-w-[192px]"
-      : "min-w-[120px] sm:min-w-[144px]";
+  const width = inChat
+    ? "w-40 sm:w-48 lg:min-w-[140px]"
+    : size === "large"
+    ? "w-48 sm:w-56 lg:min-w-[192px]"
+    : "w-40 sm:w-48 lg:min-w-[144px]";
 
   useEffect(() => {
     const checkWatchlist = async () => {
@@ -96,74 +97,80 @@ function MovieCard({
   };
 
   return (
-    <div className={`${inChat ? "w-[140px] sm:w-[160px]" : width} shrink-0`}>
-      <div className="relative bg-black rounded-md transition-transform duration-200 hover:scale-105 group">
-        <div className="relative">
+    <div className={`${width} max-w-full mx-auto shrink-0 animate-slideUp font-inter`}>
+      <div className="relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 group hover:shadow-2xl group-hover:ring-2 group-hover:ring-purple-600/50">
+        <div className="relative aspect-[2/3]">
           <Link to={isTV ? `/tv/${id}` : `/movie/${id}`}>
             <img
-              src={imageUrl || "https://via.placeholder.com/300x450?text=No+Image"}
+              src={imageUrl || "https://image.tmdb.org/t/p/w300/poster.jpg?text=No+Image"}
               alt={title}
-              className="rounded-md w-full object-cover"
+              className="rounded-t-xl w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85"
             />
           </Link>
 
+          {showUncleScore && uncleScore !== null && (
+            <div className="absolute top-3 left-3 bg-purple-400 text-white text-sm font-bold rounded-lg px-3 py-1.5 shadow-xl animate-zoomIn border border-purple-200/50">
+              🎯 {uncleScore}
+            </div>
+          )}
+
           <button
             onClick={showRemoveButton ? onRemove : toggleSave}
-            className={`absolute bottom-2 right-2 px-2 py-1 rounded-full text-xs backdrop-blur-sm bg-black/60 hover:bg-black/80 shadow-lg z-20 ${
+            className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-md bg-black/70 hover:bg-black/90 shadow-md z-20 transition-colors duration-200 ${
               showRemoveButton
-                ? "text-red-400 hover:text-red-500"
+                ? "text-red-400 hover:text-red-300"
                 : isSaved
-                ? "text-green-400 hover:text-green-500"
-                : "text-blue-400 hover:text-blue-500"
+                ? "text-indigo-500 hover:text-indigo-400"
+                : "text-indigo-500 hover:text-indigo-400"
             }`}
           >
-            {showRemoveButton ? "✖" : isSaved ? "✔ Saved" : "➕ Add"}
+            {showRemoveButton ? "✖ Remove" : isSaved ? "✔ Saved" : "➕ Add"}
           </button>
         </div>
 
-        <div className="mt-2 text-xs text-white space-y-1 px-0.5 pb-1">
-          <h3 className="text-sm font-semibold line-clamp-1">{title}</h3>
+        <div className="p-4 text-white space-y-2">
+          <h3 className="text-base font-bold line-clamp-1 group-hover:animate-marquee">{title}</h3>
 
-          {showUncleScore && (
-            uncleScore !== null ? (
-              <p className="text-green-400">🎯 Uncle Score: {uncleScore}</p>
-            ) : (
-              <p className="text-gray-400">Loading score…</p>
-            )
+          {genres.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              {genres.slice(0, 2).map((genre) => (
+                <span key={genre} className="text-xs bg-purple-600/30 rounded px-1.5 py-0.5 text-gray-200">
+                  {genre}
+                </span>
+              ))}
+            </div>
           )}
 
-          <p className="text-gray-400">
-            🌐 {languageMap[language] || language?.toUpperCase() || "N/A"}
-          </p>
+          {showUncleScore && uncleScore === null && (
+            <p className="text-sm text-gray-400 animate-pulseSlow">Loading score…</p>
+          )}
 
           {onRate && (
-            <div className="flex gap-0.5 items-center text-yellow-400">
+            <div className="flex items-center gap-1.5 text-yellow-400">
               {[1, 2, 3, 4, 5].map((star) => (
                 <span
                   key={star}
                   onClick={() => onRate(star)}
-                  className={`cursor-pointer ${
+                  className={`cursor-pointer text-lg ${
                     userRating && star <= Math.round(userRating)
                       ? "text-yellow-400"
-                      : "text-gray-600"
-                  }`}
+                      : "text-gray-500"
+                  } hover:text-yellow-300 transition-transform duration-150 hover:animate-zoomIn`}
                 >
                   ★
                 </span>
               ))}
               {userRating && (
-                <span className="text-gray-400 ml-1">
+                <span className="text-sm text-gray-300 ml-2">
                   ({userRating.toFixed(1)})
                 </span>
               )}
             </div>
           )}
 
-          {genres.length > 0 && (
-            <p className="text-gray-400 truncate">
-              {genres.slice(0, 2).join(", ")}
-            </p>
-          )}
+          <p className="text-sm text-gray-300">
+            🌐 {languageMap[language] || language?.toUpperCase() || "N/A"}
+          </p>
         </div>
       </div>
     </div>
