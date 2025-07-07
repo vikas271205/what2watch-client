@@ -15,7 +15,6 @@ import {
 import MovieCard from "../components/MovieCard";
 import genreMap from "../utils/GenreMap";
 import API_BASE from "../utils/api";
-import { useLoading } from "../context/LoadingContext";
 
 function Search() {
   const location = useLocation();
@@ -29,9 +28,7 @@ function Search() {
   const [isListening, setIsListening] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const recognitionRef = useRef(null);
-  const selectedSuggestionRef = useRef(null);
   const user = auth.currentUser;
-  const { setIsLoading } = useLoading();
 
   useEffect(() => {
     if (initialQuery.trim()) {
@@ -50,15 +47,10 @@ function Search() {
       );
       const snapshot = await getDocs(q);
       const terms = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          term: (doc.data().term || "").trim(),
-        }))
+        .map((doc) => ({ id: doc.id, term: doc.data().term?.trim() || "" }))
         .filter((item) => item.term);
 
-      const uniqueTerms = Array.from(
-        new Map(terms.map((item) => [item.term, item])).values()
-      );
+      const uniqueTerms = Array.from(new Map(terms.map(item => [item.term, item])).values());
       setHistory(uniqueTerms);
     };
 
@@ -67,19 +59,11 @@ function Search() {
 
   useEffect(() => {
     const fetchRandomMovies = async () => {
-      setIsLoading(true);
-      try {
-        const randomPage = Math.floor(Math.random() * 10) + 1;
-        const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
-
-        const data = await res.json();
-        const filtered = data.filter((m) => m.adult === false);
-        setResults(filtered);
-      } catch (e) {
-        console.error("Failed to fetch random movies:", e);
-      } finally {
-        setIsLoading(false);
-      }
+      const randomPage = Math.floor(Math.random() * 10) + 1;
+      const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
+      const data = await res.json();
+      const filtered = data.filter((m) => m.adult === false && m.poster_path);
+      setResults(filtered);
     };
 
     if (queryText.trim() === "") {
@@ -89,13 +73,12 @@ function Search() {
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (queryText.trim().length === 0 || !inputFocused) {
+      if (!queryText.trim() || !inputFocused) {
         setSuggestions([]);
         return;
       }
 
       const res = await fetch(`${API_BASE}/api/tmdb/search?q=${queryText}`);
-
       const data = await res.json();
       const movieTvSuggestions = (data.results || []).filter(
         (item) =>
@@ -110,19 +93,12 @@ function Search() {
   }, [queryText, inputFocused]);
 
   const searchTMDB = async (term) => {
-    if (!term || term === queryText.trim().toLowerCase()) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
-
-      const data = await res.json();
-      const filtered = (data.results || []).filter(
-        (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult
-      );
-      setResults(filtered);
-    } finally {
-      setIsLoading(false);
-    }
+    const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
+    const data = await res.json();
+    const filtered = (data.results || []).filter(
+      (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult
+    );
+    setResults(filtered);
   };
 
   const handleSearch = async (e) => {
@@ -166,10 +142,7 @@ function Search() {
   };
 
   const handleClearAll = async () => {
-    const q = query(
-      collection(db, "searches"),
-      where("userId", "==", user.uid)
-    );
+    const q = query(collection(db, "searches"), where("userId", "==", user.uid));
     const snapshot = await getDocs(q);
     const deletes = snapshot.docs.map((docSnap) =>
       deleteDoc(doc(db, "searches", docSnap.id))
@@ -208,41 +181,47 @@ function Search() {
   };
 
   return (
-    <div className="px-4 py-10 sm:px-6 lg:px-10 max-w-6xl mx-auto text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 py-10">
+
       <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-center sm:text-left">
         🔍 Search Movies & TV Shows
       </h2>
 
-      <form
-        onSubmit={handleSearch}
-        className="flex flex-col sm:flex-row items-center gap-4 mb-4 relative"
-      >
-        <input
-          type="text"
-          placeholder="Search for a movie or TV show..."
-          value={queryText}
-          onChange={(e) => setQueryText(e.target.value)}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setTimeout(() => setInputFocused(false), 200)}
-          className="w-full sm:flex-1 px-4 py-3 rounded-xl border border-gray-500 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            type="submit"
-            className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition w-full sm:w-auto"
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={toggleListening}
-            className={`px-4 py-3 rounded-xl transition font-bold border border-white text-white ${isListening ? "bg-red-600 animate-pulse" : "bg-gray-700 hover:bg-gray-600"}`}
-          >
-            🎤
-          </button>
-        </div>
-        {suggestions.length > 0 && queryText.trim().length > 0 && inputFocused && (
-          <ul className="absolute top-full mt-2 w-full bg-zinc-800 border border-gray-600 rounded-lg shadow-lg z-10 max-h-56 overflow-y-auto">
+      <div className="relative mb-10 z-20">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col sm:flex-row items-center gap-4 relative"
+        >
+          <input
+            type="text"
+            placeholder="Search by title, genre, actor..."
+            value={queryText}
+            onChange={(e) => setQueryText(e.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setTimeout(() => setInputFocused(false), 200)}
+            className="w-full sm:flex-1 px-4 py-3 rounded-xl border border-gray-600 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xl transition-all duration-300"
+          />
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              type="submit"
+              className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition w-full sm:w-auto"
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`px-4 py-3 rounded-xl transition font-bold border border-white text-white ${
+                isListening ? "bg-red-600 animate-pulse" : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              🎤
+            </button>
+          </div>
+        </form>
+
+        {suggestions.length > 0 && inputFocused && queryText && (
+          <ul className="absolute top-full mt-2 w-full bg-zinc-800 border border-gray-600 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto backdrop-blur-sm">
             {suggestions.map((sug) => (
               <li
                 key={sug.id}
@@ -257,14 +236,12 @@ function Search() {
             ))}
           </ul>
         )}
-      </form>
+      </div>
 
       {history.length > 0 && (
-        <div className="mb-10">
+        <div className="mb-10 z-10 relative">
           <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
-            <h3 className="text-xl font-semibold text-gray-300">
-              Recent Searches
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-300">Recent Searches</h3>
             <button
               onClick={handleClearAll}
               className="text-sm text-red-400 hover:underline"
@@ -301,32 +278,31 @@ function Search() {
         </div>
       )}
 
-      <h3 className="text-xl font-bold mb-4 text-gray-200">
-        {queryText.trim()
-          ? `Results for "${queryText}"`
-          : "🎲 Discover Random Popular Movies"}
-      </h3>
+      <div className="relative z-10">
+        <h3 className="text-xl font-bold mb-4 text-gray-200">
+          {queryText.trim()
+            ? `Results for "${queryText}"`
+            : "🎲 Discover Random Popular Movies"}
+        </h3>
 
-      <div className="flex flex-wrap gap-4">
-        {results.length === 0 ? (
-          <div className="text-center text-gray-400 mt-6">
-            <p>No results found for "<span className="italic">{queryText}</span>".</p>
-            <p className="mt-2">Try different keywords or explore trending content instead.</p>
-          </div>
-        ) : (
-          results.map((item) => (
-            <MovieCard
-              key={item.id}
-              id={item.id}
-              title={item.title || item.name}
-              imageUrl={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-              publicRating={item.vote_average?.toFixed(1)}
-              genres={item.genre_ids?.map((id) => genreMap[id] || "")}
-              isTV={item.media_type === "tv"}
-              language={item.original_language}
-            />
-          ))
-        )}
+        <div className="flex flex-wrap gap-4">
+          {results.length === 0 ? (
+            <p className="text-gray-400">No results found.</p>
+          ) : (
+            results.map((item) => (
+              <MovieCard
+                key={item.id}
+                id={item.id}
+                title={item.title || item.name}
+                imageUrl={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
+                publicRating={item.vote_average?.toFixed(1)}
+                genres={item.genre_ids?.map((id) => genreMap[id] || "")}
+                isTV={item.media_type === "tv"}
+                language={item.original_language}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
