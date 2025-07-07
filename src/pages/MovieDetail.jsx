@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   getDoc,
@@ -11,11 +11,10 @@ import {
   where,
   serverTimestamp,
 } from "firebase/firestore";
-import { fetchOMDbData } from "../api/omdb";
-import { db } from "../firebase";
-import { auth } from "../firebase";
-
+import { db, auth } from "../firebase";
 import API_BASE from "../utils/api";
+import MovieCard from "../components/MovieCard";
+import { motion } from "framer-motion";
 
 function MovieDetail() {
   const { id } = useParams();
@@ -27,10 +26,8 @@ function MovieDetail() {
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState("");
   const [allComments, setAllComments] = useState([]);
-  const [omdbData, setOmdbData] = useState(null);
-  const [platforms, setPlatforms] = useState([]);
+  const [showAllComments, setShowAllComments] = useState(false);
   const user = auth.currentUser;
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,31 +35,12 @@ function MovieDetail() {
     const fetchAll = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/tmdb/movie/${id}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const movieData = await res.json();
         setMovie(movieData);
 
-        const releaseYear = movieData.release_date?.slice(0, 4);
-        const streamingRes = await fetch(
-          `${API_BASE}/api/watchmode/id?title=${encodeURIComponent(
-            movieData.title
-          )}&year=${releaseYear}`
-        );
-        const { id: watchmodeId } = await streamingRes.json();
-
-        if (watchmodeId) {
-          const sourcesRes = await fetch(
-            `${API_BASE}/api/watchmode/sources/${watchmodeId}`
-          );
-          const sources = await sourcesRes.json();
-          setPlatforms(sources);
-        }
-
-        const omdb = await fetchOMDbData(movieData.title);
-        setOmdbData(omdb);
-
-        const trailerRes = await fetch(
-          `${API_BASE}/api/tmdb/movie/${id}/videos`
-        );
+        const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
+        if (!trailerRes.ok) throw new Error(`HTTP error! status: ${trailerRes.status}`);
         const trailerData = await trailerRes.json();
         const trailer = trailerData.results.find(
           (v) => v.type === "Trailer" && v.site === "YouTube"
@@ -70,12 +48,19 @@ function MovieDetail() {
         if (trailer) setTrailerUrl(`https://www.youtube.com/embed/${trailer.key}`);
 
         const castRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`);
+        if (!castRes.ok) throw new Error(`HTTP error! status: ${castRes.status}`);
         const castData = await castRes.json();
-        setCast(castData.cast.slice(0, 8));
+        setCast(castData.cast.slice(0, 6));
 
         const similarRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`);
+        if (!similarRes.ok) throw new Error(`HTTP error! status: ${similarRes.status}`);
         const similarData = await similarRes.json();
-        setRelatedMovies(similarData.results.slice(0, 10));
+        setRelatedMovies(similarData.results.slice(0, 6).map(m => ({
+          ...m,
+          tmdbRating: m.vote_average?.toString(),
+          language: m.original_language,
+          genres: m.genre_ids?.map(id => movieData.genres.find(g => g.id === id)?.name || ""),
+        })));
 
         if (user) {
           const watchRef = doc(db, "watchlists", `${user.uid}_${id}`);
@@ -85,14 +70,14 @@ function MovieDetail() {
           const rateRef = doc(db, "ratings", `${user.uid}_${id}`);
           const rateSnap = await getDoc(rateRef);
           if (rateSnap.exists()) setUserRating(rateSnap.data().rating);
-        }
 
-        const q = query(collection(db, "comments"), where("movieId", "==", id));
-        const snapshot = await getDocs(q);
-        const commentData = snapshot.docs
-          .map((doc) => doc.data())
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        setAllComments(commentData);
+          const q = query(collection(db, "comments"), where("movieId", "==", id));
+          const snapshot = await getDocs(q);
+          const commentData = snapshot.docs
+            .map((doc) => doc.data())
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          setAllComments(commentData);
+        }
       } catch (err) {
         console.error("Failed to fetch movie details:", err);
       }
@@ -100,53 +85,6 @@ function MovieDetail() {
 
     fetchAll();
   }, [id, user]);
-
-  useEffect(() => {
-    // Particle Animation Logic
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    canvas.style.position = "absolute";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
-    canvas.style.pointerEvents = "none";
-    canvas.style.opacity = "0.2";
-
-    const particles = [];
-
-    function createParticle(x, y) {
-      particles.push({ x, y, opacity: 1, radius: 8 });
-    }
-
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((particle, index) => {
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99, 102, 241, ${particle.opacity})`;
-        ctx.fill();
-        ctx.closePath();
-
-        particle.opacity -= 0.01;
-        if (particle.opacity <= 0) particles.splice(index, 1);
-      });
-      requestAnimationFrame(animate);
-    }
-
-    document.addEventListener("mousemove", (e) => {
-      createParticle(e.clientX, e.clientY);
-    });
-
-    animate();
-
-    // Cleanup
-    return () => {
-      document.removeEventListener("mousemove", createParticle);
-    };
-  }, []);
 
   const toggleWatchlist = async () => {
     if (!user) return;
@@ -160,7 +98,7 @@ function MovieDetail() {
         movieId: id,
         title: movie.title,
         imageUrl: `https://image.tmdb.org/t/p/w300${movie.poster_path}`,
-        rating: movie.vote_average?.toFixed(1),
+        rating: movie.vote_average?.toString(),
         timestamp: serverTimestamp(),
       });
       setIsSaved(true);
@@ -200,100 +138,90 @@ function MovieDetail() {
   };
 
   if (!movie) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600"></div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-600"></div>
     </div>
   );
 
   return (
-    <div className="relative min-h-screen text-white">
-      {/* Backdrop blurred background with particle effect */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
       {movie.backdrop_path && (
         <div
-          className="fixed top-0 left-0 w-full h-full bg-cover bg-center filter blur-md opacity-50 -z-10"
+          className="fixed top-0 left-0 w-full h-full bg-cover bg-center filter blur-md opacity-30 -z-10"
           style={{
             backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
           }}
-        >
-          <canvas ref={canvasRef} className="w-full h-full"></canvas>
-        </div>
+        />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8 relative z-20 pt-20">
-        {/* Poster and Details Side by Side */}
-        <div className="flex flex-col md:flex-row items-start gap-8 animate-fadeIn">
-          <div className="flex-shrink-0 w-full md:w-72 rounded-lg overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-16 sm:pt-20">
+        <motion.div
+          className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="flex-shrink-0 w-48 sm:w-64 md:w-72 rounded-lg overflow-hidden shadow-lg">
             <img
               src={
                 movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
-                  : "https://via.placeholder.com/500x750?text=No+Image"
+                  ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
+                  : "https://via.placeholder.com/300x450?text=No+Image"
               }
               alt={movie.title}
-              className="rounded-lg w-full h-auto object-cover"
+              className="w-full aspect-[2/3] object-cover rounded-lg"
               loading="lazy"
             />
           </div>
-          <div className="flex-1 space-y-4 animate-slideUp">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-wide drop-shadow-lg">
+          <div className="flex-1 space-y-3 sm:space-y-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
               {movie.title}
             </h1>
-            <div className="flex flex-col md:flex-row items-start md:items-center space-y-2 md:space-y-0 md:space-x-6 text-gray-400">
-              <p className="text-lg font-semibold">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-gray-400">
+              <p className="text-sm sm:text-base font-semibold">
                 {movie.release_date?.slice(0, 4)} • {movie.runtime} mins
               </p>
               <div className="flex flex-wrap gap-2">
                 {movie.genres?.map((g) => (
                   <span
                     key={g.id}
-                    className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-sm font-medium text-white shadow-md hover:shadow-lg transition-shadow"
+                    className="px-2 sm:px-3 py-1 rounded-full bg-indigo-600 text-xs sm:text-sm text-white"
+                    aria-label={`Genre: ${g.name}`}
                   >
                     {g.name}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-4 text-gray-300">
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-gray-300">
               <div className="flex items-center space-x-2">
-                <span className="font-semibold">TMDB:</span>
-                <span className="text-yellow-400 font-bold text-lg">
+                <span className="font-semibold text-sm sm:text-base">TMDB:</span>
+                <span className="text-yellow-400 font-bold text-sm sm:text-base">
                   {movie.vote_average?.toFixed(1)}
                 </span>
-                <span className="text-gray-500">({movie.vote_count} votes)</span>
+                <span className="text-gray-500 text-xs sm:text-sm">({movie.vote_count} votes)</span>
               </div>
-              {omdbData?.imdbRating && (
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">IMDb:</span>
-                  <span className="text-yellow-400 font-bold text-lg">
-                    {omdbData.imdbRating}
-                  </span>
-                </div>
-              )}
-              {omdbData?.Ratings && (
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold">Rotten Tomatoes:</span>
-                  <span className="text-yellow-400 font-bold text-lg">
-                    {
-                      omdbData.Ratings.find((r) => r.Source === "Rotten Tomatoes")?.Value || "N/A"
-                    }
-                  </span>
-                </div>
-              )}
             </div>
-            <div className="flex flex-col md:flex-row gap-4">
-              <button
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              <motion.button
                 onClick={toggleWatchlist}
-                className={`px-4 py-2 rounded-full font-semibold transition-colors duration-300 ${
-                  isSaved ? "bg-green-600 hover:bg-green-700" : "bg-gray-700 hover:bg-gray-600"
-                } transform hover:scale-105`}
+                className={`px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold transition-colors ${
+                  isSaved ? "bg-green-600" : "bg-gray-700"
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label={isSaved ? "Remove from watchlist" : "Add to watchlist"}
               >
                 {isSaved ? "In Watchlist ✅" : "Add to Watchlist"}
-              </button>
-              <select
+              </motion.button>
+              <motion.select
                 value={userRating}
                 onChange={(e) => handleRating(Number(e.target.value))}
                 disabled={!isSaved}
-                className="bg-gray-800 px-4 py-2 rounded text-white cursor-pointer hover:bg-gray-700 transition-colors"
+                className="bg-gray-800 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base text-white cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Rate movie"
               >
                 <option value="0">Rate</option>
                 {[...Array(10)].map((_, i) => (
@@ -301,39 +229,32 @@ function MovieDetail() {
                     ⭐ {i + 1}
                   </option>
                 ))}
-              </select>
+              </motion.select>
+              <motion.button
+                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-700 opacity-50 cursor-not-allowed"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled
+                aria-label="Available on (coming soon)"
+              >
+                Available On
+              </motion.button>
             </div>
-            <p className="text-md leading-relaxed text-gray-300 max-w-2xl">{movie.overview}</p>
-            {platforms.length > 0 && (
-              <>
-                <h3 className="text-xl font-semibold mb-2 mt-4">Available On:</h3>
-                <ul className="flex flex-wrap gap-2">
-                  {platforms.map((p) => (
-                    <li
-                      key={p.name}
-                      className="bg-gray-800 px-3 py-1 rounded-full hover:bg-gray-700 transition transform hover:scale-105"
-                    >
-                      <a
-                        href={p.web_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {p.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+            <p className="text-sm sm:text-base leading-relaxed text-gray-300 max-w-2xl line-clamp-6">
+              {movie.overview}
+            </p>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Trailer */}
         {trailerUrl && (
-          <div className="mt-10">
-            <h3 className="text-2xl font-semibold mb-4 animate-pulse">🎬 Watch Trailer</h3>
-            <div className="relative overflow-hidden rounded-xl shadow-2xl border border-gray-700 transform hover:scale-102 transition-transform duration-300 aspect-video">
+          <motion.section
+            className="mt-8 sm:mt-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h3 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4">🎬 Watch Trailer</h3>
+            <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-700 aspect-video">
               <iframe
                 src={trailerUrl}
                 title="Trailer"
@@ -341,105 +262,134 @@ function MovieDetail() {
                 allowFullScreen
               />
             </div>
-          </div>
+          </motion.section>
         )}
 
-        {/* Cast */}
         {cast.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-2xl font-bold mb-4 animate-fadeIn">👥 Cast</h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
+          <motion.section
+            className="mt-8 sm:mt-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">👥 Cast</h2>
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
               {cast.map((member) => (
                 <Link
                   key={member.id}
                   to={`/person/${member.id}`}
-                  className="flex-shrink-0 w-32 rounded-lg overflow-hidden bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+                  className="flex-shrink-0 w-32 sm:w-40 rounded-lg overflow-hidden bg-gray-800 shadow-lg"
+                  aria-label={`View ${member.name} profile`}
                 >
-                  <img
-                    src={
-                      member.profile_path
-                        ? `https://image.tmdb.org/t/p/w300${member.profile_path}`
-                        : "https://via.placeholder.com/300x450?text=No+Image"
-                    }
-                    alt={member.name}
-                    className="w-full h-40 object-cover"
-                    loading="lazy"
-                  />
-                  <p className="text-center p-2 text-sm font-medium text-gray-200">{member.name}</p>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <img
+                      src={
+                        member.profile_path
+                          ? `https://image.tmdb.org/t/p/w300${member.profile_path}`
+                          : "https://via.placeholder.com/300x450?text=No+Image"
+                      }
+                      alt={member.name}
+                      className="w-full h-40 sm:h-48 object-cover"
+                      loading="lazy"
+                    />
+                    <p className="text-center p-2 text-xs sm:text-sm font-medium text-gray-200 line-clamp-2">
+                      {member.name}
+                    </p>
+                  </motion.div>
                 </Link>
               ))}
             </div>
-          </section>
+          </motion.section>
         )}
 
-        {/* Related Movies */}
         {relatedMovies.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-2xl font-bold mb-4 animate-fadeIn">📽️ Related Movies</h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
+          <motion.section
+            className="mt-8 sm:mt-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">📽️ Related Movies</h2>
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
               {relatedMovies.map((m) => (
-                <Link
+                <MovieCard
                   key={m.id}
-                  to={`/movie/${m.id}`}
-                  className="flex-shrink-0 w-48 rounded-lg overflow-hidden bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
-                >
-                  <img
-                    src={
-                      m.poster_path
-                        ? `https://image.tmdb.org/t/p/w400${m.poster_path}`
-                        : "https://via.placeholder.com/400x600?text=No+Image"
-                    }
-                    alt={m.title}
-                    className="w-full h-64 object-cover"
-                    loading="lazy"
-                  />
-                  <p className="text-center p-2 text-sm font-medium text-gray-200">{m.title}</p>
-                </Link>
+                  id={m.id}
+                  title={m.title}
+                  imageUrl={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
+                  tmdbRating={m.tmdbRating}
+                  genres={m.genres}
+                  language={m.original_language}
+                />
               ))}
             </div>
-          </section>
+          </motion.section>
         )}
 
-        {/* Comments */}
-        <section className="mt-10">
-          <h2 className="text-2xl font-bold mb-4 animate-fadeIn">💬 Comments</h2>
+        <motion.section
+          className="mt-8 sm:mt-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">💬 Comments</h2>
           {user && (
-            <div className="flex gap-2 mb-6 animate-slideUp">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6">
               <input
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Leave a comment..."
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-white transition-all duration-300 hover:bg-gray-700"
+                className="flex-1 px-3 sm:px-4 py-2 rounded-lg bg-gray-800 text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                aria-label="Comment input"
               />
-              <button
+              <motion.button
                 onClick={submitComment}
-                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-medium transition-all duration-300 transform hover:scale-105"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-sm sm:text-base font-medium"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Post comment"
               >
                 Post
-              </button>
+              </motion.button>
             </div>
           )}
           {allComments.length > 0 ? (
-            <ul className="space-y-4">
-              {allComments.map((c) => (
-                <li
+            <ul className="space-y-3 sm:space-y-4">
+              {allComments.slice(0, showAllComments ? undefined : 3).map((c) => (
+                <motion.li
                   key={c.timestamp}
-                  className="bg-gradient-to-r from-gray-800 to-gray-900 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fadeInUp transform hover:-translate-y-1 hover:bg-gray-800"
+                  className="bg-gray-800 p-3 sm:p-4 rounded-xl shadow-lg"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
                 >
-                  <p className="text-xs text-gray-500 mb-1 font-semibold">{c.userEmail}</p>
-                  <p className="text-gray-300 whitespace-pre-line">{c.comment}</p>
-                </li>
+                  <p className="text-xs sm:text-sm text-gray-500 mb-1 font-semibold">{c.userEmail}</p>
+                  <p className="text-sm sm:text-base text-gray-300 whitespace-pre-line">{c.comment}</p>
+                </motion.li>
               ))}
+              {allComments.length > 3 && (
+                <motion.button
+                  onClick={() => setShowAllComments(!showAllComments)}
+                  className="text-indigo-400 hover:underline text-sm sm:text-base"
+                  whileHover={{ scale: 1.05 }}
+                  aria-label={showAllComments ? "Show fewer comments" : "Show all comments"}
+                >
+                  {showAllComments ? "Show Fewer" : `Show All (${allComments.length})`}
+                </motion.button>
+              )}
             </ul>
           ) : (
-            <p className="text-gray-500 italic text-sm animate-pulse">No comments yet.</p>
+            <p className="text-gray-500 text-sm sm:text-base italic">No comments yet.</p>
           )}
-        </section>
+        </motion.section>
       </div>
 
       <style>
         {`
-          /* Scrollbar style */
           .scrollbar-thin::-webkit-scrollbar {
             height: 8px;
           }
@@ -449,28 +399,6 @@ function MovieDetail() {
           }
           .scrollbar-thin::-webkit-scrollbar-track {
             background-color: #1f2937;
-          }
-
-          /* Animations */
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          @keyframes fadeInUp {
-            from { transform: translateY(10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-          }
-          .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
-          .animate-slideUp { animation: slideUp 0.6s ease-out; }
-          .animate-fadeInUp { animation: fadeInUp 0.5s ease-out; }
-          .animate-pulse { animation: pulse 1.5s infinite; }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
           }
         `}
       </style>

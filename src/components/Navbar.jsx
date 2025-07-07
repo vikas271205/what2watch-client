@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { Menu, X, Moon, Sun, Search } from "lucide-react";
 import useDarkMode from "../utils/useDarkMode";
+import useAdminClaim from "../hooks/useAdminClaim";
 
 function Navbar() {
   const [user, setUser] = useState(null);
@@ -10,6 +11,7 @@ function Navbar() {
   const navigate = useNavigate();
   const auth = getAuth();
   const [darkMode, setDarkMode] = useDarkMode();
+  const { isAdmin } = useAdminClaim(); // ✅
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -32,14 +34,14 @@ function Navbar() {
         {/* Mobile Controls */}
         <div className="flex items-center gap-2 sm:gap-3 md:hidden">
           <Link to="/search" aria-label="Search" className="hover:text-indigo-400 transition-colors duration-200">
-            <Search size={18} className="sm:w-6 sm:h-6 transition-colors duration-200" />
+            <Search size={18} className="sm:w-6 sm:h-6" />
           </Link>
           <button
             onClick={() => setDarkMode(!darkMode)}
             aria-label="Toggle Dark Mode"
             className="hover:text-indigo-400 transition-colors duration-200"
           >
-            {darkMode ? <Sun size={16} className="sm:w-5 sm:h-5" /> : <Moon size={16} className="sm:w-5 sm:h-5" />}
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
@@ -52,41 +54,42 @@ function Navbar() {
 
         {/* Desktop Links */}
         <div className="hidden md:flex gap-4 sm:gap-6 items-center">
-          <Link to="/" className="hover:text-indigo-400 transition-colors duration-200">Home</Link>
-          <Link to="/trending" className="hover:text-indigo-400 transition-colors duration-200">Trending</Link>
-          <Link to="/search" className="hover:text-indigo-400 transition-colors duration-200">Search</Link>
-          <Link to="/genres" className="hover:text-indigo-400 transition-colors duration-200">Genres</Link>
-          <Link to="/watchlist" className="hover:text-indigo-400 transition-colors duration-200">Watchlist</Link>
-          <Link to="/tvshows" className="hover:text-indigo-400 transition-colors duration-200">TV Shows</Link>
-          <Link to="/recommended" className="hover:text-indigo-400 transition-colors duration-200">Recommended</Link>
+          <Link to="/" className="hover:text-indigo-400">Home</Link>
+          <Link to="/trending" className="hover:text-indigo-400">Trending</Link>
+          <Link to="/search" className="hover:text-indigo-400">Search</Link>
+          <Link to="/genres" className="hover:text-indigo-400">Genres</Link>
+          <Link to="/watchlist" className="hover:text-indigo-400">Watchlist</Link>
+          <Link to="/tvshows" className="hover:text-indigo-400">TV Shows</Link>
+          <Link to="/recommended" className="hover:text-indigo-400">Recommended</Link>
+          {isAdmin && <Link to="/admin/recommend" className="hover:text-yellow-400 font-semibold">Admin</Link>}
 
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="hover:text-indigo-400 transition-colors duration-200"
             aria-label="Toggle Dark Mode"
+            className="hover:text-indigo-400"
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
           {!user ? (
             <>
-              <Link to="/login" className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 transition-colors duration-200 text-sm sm:text-base">
+              <Link to="/login" className="px-3 py-1 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 text-sm sm:text-base">
                 Login
               </Link>
-              <Link to="/signup" className="px-2 sm:px-3 py-1 sm:py-1.5 border border-white rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 text-sm sm:text-base">
+              <Link to="/signup" className="px-3 py-1 border border-white rounded-lg font-semibold hover:bg-gray-800 text-sm sm:text-base">
                 Sign Up
               </Link>
             </>
           ) : (
             <>
-              <Link to="/profile" className="hover:opacity-90 transition-opacity duration-200">
+              <Link to="/profile" className="hover:opacity-90">
                 <div className="w-7 sm:w-8 h-7 sm:h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm sm:text-base">
                   <span>{user.email?.charAt(0).toUpperCase() || "U"}</span>
                 </div>
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-2 sm:px-3 py-1 sm:py-1.5 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors duration-200 text-sm sm:text-base"
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm sm:text-base"
               >
                 Logout
               </button>
@@ -97,22 +100,27 @@ function Navbar() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-gray-900 border-t border-gray-700 px-2 sm:px-4 py-2 flex flex-col gap-2 sm:gap-3">
-          <Link to="/search" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">Search</Link>
-          <Link to="/trending" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">Trending</Link>
-          <Link to="/genres" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">Genres</Link>
-          <Link to="/watchlist" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">Watchlist</Link>
-          <Link to="/tvshows" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">TV Shows</Link>
-          <Link to="/recommended" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400 transition-colors duration-200 text-sm sm:text-base">Recommended</Link>
+        <div className="md:hidden bg-gray-900 border-t border-gray-700 px-2 sm:px-4 py-2 flex flex-col gap-2">
+          <Link to="/search" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Search</Link>
+          <Link to="/trending" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Trending</Link>
+          <Link to="/genres" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Genres</Link>
+          <Link to="/watchlist" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Watchlist</Link>
+          <Link to="/tvshows" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">TV Shows</Link>
+          <Link to="/recommended" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Recommended</Link>
+          {isAdmin && <Link to="/admin/recommend" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400 font-semibold">Admin</Link>}
 
           {!user ? (
             <>
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-white text-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-gray-200 transition-colors duration-200 text-sm sm:text-base">Login</Link>
-              <Link to="/signup" onClick={() => setMenuOpen(false)} className="border border-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm sm:text-base">Sign Up</Link>
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-white text-black px-3 py-1 rounded-lg hover:bg-gray-200 text-sm sm:text-base">
+                Login
+              </Link>
+              <Link to="/signup" onClick={() => setMenuOpen(false)} className="border border-white px-3 py-1 rounded-lg hover:bg-gray-800 text-sm sm:text-base">
+                Sign Up
+              </Link>
             </>
           ) : (
             <>
-              <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-90 transition-opacity duration-200">
+              <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-90">
                 <div className="w-7 sm:w-8 h-7 sm:h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm sm:text-base">
                   <span>{user.email?.charAt(0).toUpperCase() || "U"}</span>
                 </div>
@@ -122,7 +130,7 @@ function Navbar() {
                   setMenuOpen(false);
                   handleLogout();
                 }}
-                className="bg-red-600 hover:bg-red-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors duration-200 text-sm sm:text-base"
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg text-sm sm:text-base"
               >
                 Logout
               </button>

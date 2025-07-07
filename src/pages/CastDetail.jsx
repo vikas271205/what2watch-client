@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import API_BASE from "../utils/api";
 import { useLoading } from "../context/LoadingContext";
 import ShimmerListGrid from "../components/ShimmerListGrid";
+import { motion } from "framer-motion";
 
 function CastDetail() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ function CastDetail() {
       setIsLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/tmdb/person/${id}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setPerson(data);
       } catch (err) {
@@ -27,8 +29,9 @@ function CastDetail() {
     const fetchPersonMovies = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/tmdb/person/${id}/movies`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
-        setMovies(data.cast.slice(0, 20));
+        setMovies(data.cast.slice(0, 10).filter(item => item.poster_path)); // Limit to 10 with posters
       } catch (err) {
         console.error("Failed to fetch person movies:", err);
       }
@@ -38,18 +41,22 @@ function CastDetail() {
     fetchPersonMovies();
   }, [id, setIsLoading]);
 
-  if (!person)
-    return (
-      <div className="p-6">
-        <ShimmerListGrid count={4} />
-      </div>
-    );
+  if (!person) return (
+    <div className="p-4 sm:p-6">
+      <ShimmerListGrid count={4} />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 py-6 max-w-5xl mx-auto relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6 max-w-6xl mx-auto">
       {/* Profile Header */}
-      <div className="flex flex-col md:flex-row gap-6 items-start animate-fadeIn">
-        <div className="flex-shrink-0 w-full md:w-48 rounded-xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+      <motion.div
+        className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="flex-shrink-0 w-32 sm:w-48 rounded-xl overflow-hidden shadow-lg">
           <img
             src={
               person.profile_path
@@ -57,27 +64,33 @@ function CastDetail() {
                 : "https://via.placeholder.com/300x450?text=No+Image"
             }
             alt={person.name}
-            className="w-full h-auto object-cover rounded-xl"
+            className="w-full aspect-[2/3] object-cover rounded-xl"
+            loading="lazy"
           />
         </div>
-        <div className="space-y-4 animate-slideUp">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-wide drop-shadow-lg bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+        <div className="space-y-3 sm:space-y-4">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
             {person.name}
           </h1>
-          <p className="text-gray-300 text-sm sm:text-md italic">
+          <p className="text-sm sm:text-base text-gray-300 italic">
             {person.place_of_birth || "Unknown birthplace"}
           </p>
-          <p className="text-gray-400 text-sm sm:text-md leading-relaxed max-w-prose">
+          <p className="text-sm sm:text-base text-gray-400 leading-relaxed max-w-prose line-clamp-6">
             {person.biography || "No biography available."}
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Known For */}
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mt-8 sm:mt-12 mb-4 animate-fadeIn text-indigo-400">
+      <motion.h2
+        className="text-lg sm:text-xl md:text-2xl font-semibold mt-6 sm:mt-8 mb-3 sm:mb-4 text-indigo-400"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         🎬 Known For
-      </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-6">
+      </motion.h2>
+      <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
         {movies.map((movie) => {
           const isTV = !!movie.name;
           const title = movie.title || movie.name;
@@ -86,21 +99,27 @@ function CastDetail() {
             <Link
               key={movie.id}
               to={link}
-              className="block rounded-xl overflow-hidden bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 sm:hover:-translate-y-2"
+              className="flex-shrink-0 w-32 sm:w-40 rounded-xl overflow-hidden bg-gray-800 shadow-lg"
             >
-              <img
-                src={
-                  movie.poster_path
-                    ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-                    : "https://via.placeholder.com/300x450?text=No+Image"
-                }
-                alt={title}
-                className="w-full h-32 sm:h-48 md:h-64 object-cover rounded-t-xl"
-                loading="lazy"
-              />
-              <p className="text-xs sm:text-sm text-center p-1 sm:p-2 text-gray-200 font-medium">
-                {title}
-              </p>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <img
+                  src={
+                    movie.poster_path
+                      ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
+                      : "https://via.placeholder.com/300x450?text=No+Image"
+                  }
+                  alt={title}
+                  className="w-full h-48 sm:h-56 object-cover rounded-t-xl"
+                  loading="lazy"
+                />
+                <p className="text-xs sm:text-sm text-center p-2 text-gray-200 font-medium line-clamp-2">
+                  {title}
+                </p>
+              </motion.div>
             </Link>
           );
         })}
@@ -108,16 +127,16 @@ function CastDetail() {
 
       <style>
         {`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+          .scrollbar-thin::-webkit-scrollbar {
+            height: 8px;
           }
-          @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: #6366f1;
+            border-radius: 4px;
           }
-          .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
-          .animate-slideUp { animation: slideUp 0.6s ease-out; }
+          .scrollbar-thin::-webkit-scrollbar-track {
+            background-color: #1f2937;
+          }
         `}
       </style>
     </div>

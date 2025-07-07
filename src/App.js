@@ -10,13 +10,14 @@ import MovieDetail from "./pages/MovieDetail";
 import Profile from "./pages/Profile";
 import TVDetail from "./pages/TVDetail";
 import TVShows from "./pages/TVShows";
-import Recommended from "./pages/Recommended";
+import Recommended from "./pages/UnclesPick";
 import Genres from "./pages/Genres";
 import CastDetail from "./pages/CastDetail";
 import Trending from "./pages/Trending";
 import ChatAssistant from "./pages/ChatAssistant";
 import { LoadingProvider } from "./context/LoadingContext";
-
+import AdminRecommend from "./pages/AdminRecommend";
+import AdminRoute from "./components/AdminRoute";
 function App() {
   const [darkMode, setDarkMode] = useState(false);
 
@@ -57,6 +58,11 @@ function App() {
         <Route path="/person/:id" element={<CastDetail />} />
         <Route path="/trending" element={<Trending />} />
         <Route path="/assistant" element={<ChatAssistant />} />
+        <Route path="/admin/recommend" element={
+  <AdminRoute>
+    <AdminRecommend />
+  </AdminRoute>
+} />
       </Routes>
 
       <Link

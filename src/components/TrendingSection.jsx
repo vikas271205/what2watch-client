@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
-import API_BASE from "../utils/api"; // adjust path if needed
+import API_BASE from "../utils/api";
 import { useLoading } from "../context/LoadingContext";
-
+import { fetchOMDbData } from "../api/omdb";
 
 function TrendingSection() {
   const [movies, setMovies] = useState([]);
@@ -10,7 +10,6 @@ function TrendingSection() {
   const scrollRef = useRef();
   const { setIsLoading } = useLoading();
 
-  // 🔹 Fetch genre map from backend
   useEffect(() => {
     const fetchGenres = async () => {
       try {
@@ -29,9 +28,9 @@ function TrendingSection() {
     fetchGenres();
   }, []);
 
-  // 🔹 Fetch trending movies
   useEffect(() => {
     const fetchTrending = async () => {
+      if (Object.keys(genreMap).length === 0) return;
       try {
         setIsLoading(true);
         const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
@@ -42,30 +41,34 @@ function TrendingSection() {
           .sort(() => 0.5 - Math.random())
           .slice(0, 15);
 
-        const enriched = filtered.map((movie) => ({
-          id: movie.id,
-          title: movie.title,
-          imageUrl: `https://image.tmdb.org/t/p/w300${movie.poster_path}`,
-          publicRating: movie.vote_average,
-          language: movie.original_language,
-          genres: movie.genre_ids.map((id) => genreMap[id]).filter(Boolean),
-        }));
+        const enriched = await Promise.all(
+          filtered.map(async (movie) => {
+            const omdbData = await fetchOMDbData(movie.title, movie.release_date?.slice(0, 4));
+            return {
+              id: movie.id,
+              title: movie.title,
+              imageUrl: `https://image.tmdb.org/t/p/w300${movie.poster_path}`,
+              tmdbRating: movie.vote_average?.toString(),
+              imdbRating: omdbData?.imdbRating,
+              rtRating: omdbData?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value,
+              language: movie.original_language,
+              genres: movie.genre_ids.map((id) => genreMap[id]).filter(Boolean),
+            };
+          })
+        );
 
         setMovies(enriched);
       } catch (err) {
         console.error("Failed to fetch trending movies:", err);
         setMovies([]);
-      }finally {
-    setIsLoading(false); // ✅ Add this line
-  }
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (Object.keys(genreMap).length > 0) {
-      fetchTrending();
-    }
-  }, [genreMap]);
+    fetchTrending();
+  }, [genreMap, setIsLoading]);
 
-  // 🔄 Auto-scroll animation
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -113,7 +116,9 @@ function TrendingSection() {
               id={movie.id}
               title={movie.title}
               imageUrl={movie.imageUrl}
-              publicRating={movie.publicRating}
+              tmdbRating={movie.tmdbRating}
+              imdbRating={movie.imdbRating}
+              rtRating={movie.rtRating}
               language={movie.language}
               genres={movie.genres}
               size="small"

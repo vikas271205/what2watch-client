@@ -3,6 +3,9 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
+
+
+
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +20,10 @@ function Login() {
       alert(error.message);
     }
   };
+
+
+
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black px-4">

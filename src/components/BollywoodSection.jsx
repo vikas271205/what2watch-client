@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
 import genreMap from "../utils/GenreMap";
-import API_BASE from "../utils/api"; // adjust path if needed
-
+import API_BASE from "../utils/api";
+import { fetchOMDbData } from "../api/omdb";
 
 function BollywoodSection() {
   const [movies, setMovies] = useState([]);
@@ -20,10 +20,19 @@ function BollywoodSection() {
           .sort(() => 0.5 - Math.random())
           .slice(0, 15);
 
-        const formatted = filtered.map((movie) => ({
-          ...movie,
-          genre_names: movie.genre_ids.map((id) => genreMap[id] || "Unknown"),
-        }));
+        // Fetch OMDb data for each movie to get IMDb and RT ratings
+        const formatted = await Promise.all(
+          filtered.map(async (movie) => {
+            const omdbData = await fetchOMDbData(movie.title, movie.release_date?.slice(0, 4));
+            return {
+              ...movie,
+              genre_names: movie.genre_ids.map((id) => genreMap[id] || "Unknown"),
+              tmdbRating: movie.vote_average?.toString(),
+              imdbRating: omdbData?.imdbRating,
+              rtRating: omdbData?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value,
+            };
+          })
+        );
 
         setMovies(formatted);
       } catch (err) {
@@ -82,11 +91,13 @@ function BollywoodSection() {
               id={movie.id}
               title={movie.title}
               imageUrl={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-              publicRating={movie.vote_average}
               size="small"
               genres={movie.genre_names}
               isTV={false}
               language={movie.original_language}
+              tmdbRating={movie.tmdbRating}
+              imdbRating={movie.imdbRating}
+              rtRating={movie.rtRating}
             />
           ))}
         </div>

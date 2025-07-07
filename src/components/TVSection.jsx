@@ -1,14 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
-import API_BASE from "../utils/api"; // adjust path if needed
-
+import API_BASE from "../utils/api";
+import { fetchOMDbData } from "../api/omdb";
 
 function TVSection() {
   const [tvShows, setTVShows] = useState([]);
   const [genreMap, setGenreMap] = useState({});
   const scrollRef = useRef();
 
-  // 🔹 Fetch TV genres
   useEffect(() => {
     const fetchGenres = async () => {
       try {
@@ -27,9 +26,9 @@ function TVSection() {
     fetchGenres();
   }, []);
 
-  // 🔹 Fetch trending TV shows
   useEffect(() => {
     const fetchTrendingTV = async () => {
+      if (Object.keys(genreMap).length === 0) return;
       try {
         const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
         const data = await res.json();
@@ -42,10 +41,18 @@ function TVSection() {
           .sort(() => 0.5 - Math.random())
           .slice(0, 15);
 
-        const enriched = shuffled.map((tv) => ({
-          ...tv,
-          genre_names: tv.genre_ids.map((id) => genreMap[id]).filter(Boolean),
-        }));
+        const enriched = await Promise.all(
+          shuffled.map(async (tv) => {
+            const omdbData = await fetchOMDbData(tv.name, tv.first_air_date?.slice(0, 4));
+            return {
+              ...tv,
+              genre_names: tv.genre_ids.map((id) => genreMap[id]).filter(Boolean),
+              tmdbRating: tv.vote_average?.toString(),
+              imdbRating: omdbData?.imdbRating,
+              rtRating: omdbData?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value,
+            };
+          })
+        );
 
         setTVShows(enriched);
       } catch (err) {
@@ -54,12 +61,9 @@ function TVSection() {
       }
     };
 
-    if (Object.keys(genreMap).length > 0) {
-      fetchTrendingTV();
-    }
+    fetchTrendingTV();
   }, [genreMap]);
 
-  // 🔄 Auto-scroll
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -107,7 +111,9 @@ function TVSection() {
               id={tv.id}
               title={tv.name}
               imageUrl={`https://image.tmdb.org/t/p/w300${tv.poster_path}`}
-              publicRating={tv.vote_average}
+              tmdbRating={tv.tmdbRating}
+              imdbRating={tv.imdbRating}
+              rtRating={tv.rtRating}
               size="small"
               genres={tv.genre_names}
               isTV={true}

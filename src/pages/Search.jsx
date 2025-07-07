@@ -15,12 +15,12 @@ import {
 import MovieCard from "../components/MovieCard";
 import genreMap from "../utils/GenreMap";
 import API_BASE from "../utils/api";
+import { motion } from "framer-motion";
 
 function Search() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const initialQuery = params.get("q") || "";
-
   const [queryText, setQueryText] = useState(initialQuery);
   const [results, setResults] = useState([]);
   const [history, setHistory] = useState([]);
@@ -28,6 +28,8 @@ function Search() {
   const [isListening, setIsListening] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const recognitionRef = useRef(null);
+  const inputRef = useRef(null);
+  const suggestionRef = useRef(null);
   const user = auth.currentUser;
 
   useEffect(() => {
@@ -51,7 +53,7 @@ function Search() {
         .filter((item) => item.term);
 
       const uniqueTerms = Array.from(new Map(terms.map(item => [item.term, item])).values());
-      setHistory(uniqueTerms);
+      setHistory(uniqueTerms.slice(0, 5)); // Limit history to 5
     };
 
     fetchHistory();
@@ -61,9 +63,14 @@ function Search() {
     const fetchRandomMovies = async () => {
       const randomPage = Math.floor(Math.random() * 10) + 1;
       const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      const filtered = data.filter((m) => m.adult === false && m.poster_path);
-      setResults(filtered);
+      setResults(data.filter((m) => m.adult === false && m.poster_path).slice(0, 10).map(m => ({
+        ...m,
+        tmdbRating: m.vote_average?.toString(),
+        language: m.original_language,
+        genres: m.genre_ids?.map(id => genreMap[id] || ""),
+      })));
     };
 
     if (queryText.trim() === "") {
@@ -78,13 +85,12 @@ function Search() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/api/tmdb/search?q=${queryText}`);
+      const res = await fetch(`${API_BASE}/api/tmdb/search?q=${encodeURIComponent(queryText)}`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
-      const movieTvSuggestions = (data.results || []).filter(
-        (item) =>
-          (item.media_type === "movie" || item.media_type === "tv") &&
-          (item.title || item.name)
-      );
+      const movieTvSuggestions = (data.results || [])
+        .filter((item) => (item.media_type === "movie" || item.media_type === "tv") && (item.title || item.name))
+        .slice(0, 5);
       setSuggestions(movieTvSuggestions);
     };
 
@@ -92,13 +98,35 @@ function Search() {
     return () => clearTimeout(timeout);
   }, [queryText, inputFocused]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        inputRef.current &&
+        suggestionRef.current &&
+        !inputRef.current.contains(event.target) &&
+        !suggestionRef.current.contains(event.target)
+      ) {
+        setSuggestions([]);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const searchTMDB = async (term) => {
-    const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
+    const res = await fetch(`${API_BASE}/api/tmdb/search?q=${encodeURIComponent(term)}`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    const filtered = (data.results || []).filter(
-      (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult
-    );
-    setResults(filtered);
+    setResults((data.results || [])
+      .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult)
+      .slice(0, 10)
+      .map(m => ({
+        ...m,
+        tmdbRating: m.vote_average?.toString(),
+        language: m.original_language,
+        genres: m.genre_ids?.map(id => genreMap[id] || ""),
+      })));
   };
 
   const handleSearch = async (e) => {
@@ -107,6 +135,7 @@ function Search() {
     if (!term) return;
 
     await searchTMDB(term);
+    setSuggestions([]);
 
     if (user) {
       const alreadyExists = history.find((item) => item.term === term);
@@ -118,7 +147,7 @@ function Search() {
           timestamp: serverTimestamp(),
         });
 
-        setHistory((prev) => [{ id, term }, ...prev]);
+        setHistory((prev) => [{ id, term }, ...prev.slice(0, 4)]);
       }
     }
   };
@@ -181,113 +210,142 @@ function Search() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 py-10">
-
-      <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-center sm:text-left">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6">
+      <motion.h2
+        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         🔍 Search Movies & TV Shows
-      </h2>
+      </motion.h2>
 
-      <div className="relative mb-10 z-20">
+      <div className="relative mb-6 sm:mb-8 z-20">
         <form
           onSubmit={handleSearch}
-          className="flex flex-col sm:flex-row items-center gap-4 relative"
+          className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 sticky top-12 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
         >
-          <input
-            type="text"
-            placeholder="Search by title, genre, actor..."
-            value={queryText}
-            onChange={(e) => setQueryText(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setTimeout(() => setInputFocused(false), 200)}
-            className="w-full sm:flex-1 px-4 py-3 rounded-xl border border-gray-600 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xl transition-all duration-300"
-          />
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search by title, genre, actor..."
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onKeyDown={(e) => e.key === "Enter" && setSuggestions([])}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-800 border border-gray-700 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              aria-label="Search input"
+            />
+            {suggestions.length > 0 && inputFocused && queryText && (
+              <motion.ul
+                ref={suggestionRef}
+                className="absolute top-full mt-1 w-full bg-gray-800 border border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {suggestions.map((sug) => (
+                  <li
+                    key={sug.id}
+                    className="px-3 sm:px-4 py-2 hover:bg-gray-700 cursor-pointer text-sm sm:text-base"
+                    onMouseDown={() => {
+                      setQueryText(sug.title || sug.name);
+                      searchTMDB(sug.title || sug.name);
+                      setSuggestions([]);
+                    }}
+                  >
+                    {sug.title || sug.name} ({sug.media_type === "movie" ? "Movie" : "TV"})
+                  </li>
+                ))}
+              </motion.ul>
+            )}
+          </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <button
+            <motion.button
               type="submit"
-              className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition w-full sm:w-auto"
+              className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-indigo-600 text-sm sm:text-base font-semibold"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label="Search"
             >
               Search
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={toggleListening}
-              className={`px-4 py-3 rounded-xl transition font-bold border border-white text-white ${
-                isListening ? "bg-red-600 animate-pulse" : "bg-gray-700 hover:bg-gray-600"
+              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm sm:text-base font-semibold border border-gray-700 ${
+                isListening ? "bg-red-600 animate-pulse" : "bg-gray-800"
               }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label="Toggle voice search"
             >
               🎤
-            </button>
+            </motion.button>
           </div>
         </form>
-
-        {suggestions.length > 0 && inputFocused && queryText && (
-          <ul className="absolute top-full mt-2 w-full bg-zinc-800 border border-gray-600 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto backdrop-blur-sm">
-            {suggestions.map((sug) => (
-              <li
-                key={sug.id}
-                className="px-4 py-2 hover:bg-zinc-700 cursor-pointer"
-                onMouseDown={() => {
-                  setQueryText(sug.title || sug.name);
-                  searchTMDB(sug.title || sug.name);
-                }}
-              >
-                {sug.title || sug.name}
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       {history.length > 0 && (
-        <div className="mb-10 z-10 relative">
-          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
-            <h3 className="text-xl font-semibold text-gray-300">Recent Searches</h3>
-            <button
+        <motion.div
+          className="mb-6 sm:mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex justify-between items-center mb-2 sm:mb-3">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-300">Recent Searches</h3>
+            <motion.button
               onClick={handleClearAll}
-              className="text-sm text-red-400 hover:underline"
+              className="text-sm sm:text-base text-red-400 hover:underline"
+              whileHover={{ scale: 1.05 }}
+              aria-label="Clear search history"
             >
               Clear All
-            </button>
+            </motion.button>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {history.map(({ term }, index) =>
-              term ? (
-                <div
-                  key={index}
-                  className="flex items-center bg-gray-700 text-white text-sm px-4 py-2 rounded-full"
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {history.map(({ term }, index) => term && (
+              <div
+                key={index}
+                className="flex items-center bg-gray-800 text-sm sm:text-base px-3 sm:px-4 py-1 sm:py-2 rounded-full"
+              >
+                <button
+                  onClick={() => {
+                    setQueryText(term);
+                    searchTMDB(term);
+                  }}
+                  className="hover:underline mr-2"
+                  aria-label={`Search for ${term}`}
                 >
-                  <button
-                    onClick={() => {
-                      setQueryText(term);
-                      searchTMDB(term);
-                    }}
-                    className="hover:underline mr-2"
-                  >
-                    {term}
-                  </button>
-                  <button
-                    onClick={() => handleRemoveTerm(term)}
-                    className="text-red-400 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : null
-            )}
+                  {term}
+                </button>
+                <motion.button
+                  onClick={() => handleRemoveTerm(term)}
+                  className="text-red-400 hover:text-red-500"
+                  whileHover={{ scale: 1.1 }}
+                  aria-label={`Remove ${term} from history`}
+                >
+                  ✕
+                </motion.button>
+              </div>
+            ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      <div className="relative z-10">
-        <h3 className="text-xl font-bold mb-4 text-gray-200">
-          {queryText.trim()
-            ? `Results for "${queryText}"`
-            : "🎲 Discover Random Popular Movies"}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-200">
+          {queryText.trim() ? `Results for "${queryText}"` : "🎲 Discover Random Popular Movies"}
         </h3>
-
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {results.length === 0 ? (
-            <p className="text-gray-400">No results found.</p>
+            <p className="text-gray-400 text-sm sm:text-base col-span-full">No results found.</p>
           ) : (
             results.map((item) => (
               <MovieCard
@@ -295,15 +353,15 @@ function Search() {
                 id={item.id}
                 title={item.title || item.name}
                 imageUrl={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-                publicRating={item.vote_average?.toFixed(1)}
-                genres={item.genre_ids?.map((id) => genreMap[id] || "")}
+                tmdbRating={item.tmdbRating}
+                genres={item.genres}
                 isTV={item.media_type === "tv"}
                 language={item.original_language}
               />
             ))
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

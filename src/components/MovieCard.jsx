@@ -1,75 +1,90 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { auth } from "../firebase"; // Adjusted import
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { Link, useLocation } from "react-router-dom";
+import { auth } from "../firebase";
+import { getFirestore, doc, setDoc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import languageMap from "../utils/LanguageMap";
+import { calculateUncleScore } from "../utils/uncleScore";
 
 function MovieCard({
   id,
   title,
   imageUrl,
-  publicRating,
-  userRating,
   showRemoveButton = false,
   onRemove,
   genres = [],
   size = "small",
   isTV = false,
+  type,
   language,
-  onRate,
+  tmdbRating,
+  imdbRating,
+  rtRating,
+  isSaved: initialIsSaved,
+  year,
+  isAdmin = false,
+  onDelete,
   showUncleScore = true,
-  inChat = false,
-  uncleScore,
-  isSaved,
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialIsSaved || false);
   const db = getFirestore();
   const user = auth.currentUser;
   const cardRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
+  const location = useLocation();
+  const finalUncleScore = calculateUncleScore(tmdbRating, imdbRating, rtRating);
 
-  const width = inChat
-    ? "w-40 sm:w-48 lg:w-48"
-    : size === "large"
-    ? "w-48 sm:w-56 lg:w-64"
-    : "w-40 sm:w-48 lg:w-52";
+  const width = size === "large" ? "w-48 sm:w-56 lg:w-64" : "w-40 sm:w-48 lg:w-52";
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
+      ([entry]) => setIsVisible(entry.isIntersecting),
       { threshold: 0.1 }
     );
+    if (cardRef.current) observer.observe(cardRef.current);
+    return () => cardRef.current && observer.unobserve(cardRef.current);
+  }, []);
 
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
+  useEffect(() => {
+    if (!user) {
+      setIsSaved(false);
+      return;
     }
 
-    return () => {
-      if (cardRef.current) {
-        observer.unobserve(cardRef.current);
+    const checkWatchlist = async () => {
+      try {
+        const docId = isTV ? `${user.uid}_${id}_tv` : `${user.uid}_${id}`;
+        const watchRef = doc(db, "watchlists", docId);
+        const watchSnap = await getDoc(watchRef);
+        setIsSaved(watchSnap.exists());
+      } catch (err) {
+        console.error("Failed to check watchlist:", err);
       }
     };
-  }, []);
+
+    checkWatchlist();
+  }, [user, id, isTV]);
 
   const toggleSave = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const ref = doc(db, "watchlists", `${user.uid}_${id}`);
+      const docId = isTV ? `${user.uid}_${id}_tv` : `${user.uid}_${id}`;
+      const ref = doc(db, "watchlists", docId);
       if (isSaved) {
         await deleteDoc(ref);
+        setIsSaved(false);
       } else {
         await setDoc(ref, {
           userId: user.uid,
-          movieId: id,
+          [isTV ? "tvId" : "movieId"]: isTV ? `${id}_tv` : id,
           title,
           imageUrl,
-          rating: publicRating,
           language,
+          rating: tmdbRating,
           timestamp: serverTimestamp(),
         });
+        setIsSaved(true);
       }
     } catch (err) {
       console.error("Failed to toggle watchlist:", err);
@@ -78,11 +93,33 @@ function MovieCard({
     }
   };
 
+  const handleAdminDelete = async () => {
+    if (!onDelete || !isAdmin) return;
+    const confirmDelete = window.confirm(`Delete "${title}" from recommended?`);
+    if (!confirmDelete) return;
+    const token = await user.getIdToken();
+
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE || ""}/api/recommend/${type}_${id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const result = await res.json();
+    if (result.success) {
+      onDelete(`${type}_${id}`);
+    } else {
+      alert(result.error || "Failed to delete");
+    }
+  };
+
+  const linkTo = type === "tv" || isTV ? `/tv/${id}` : `/movie/${id}`;
+
   return (
     <div
       ref={cardRef}
       className={`${width} max-w-full mx-auto shrink-0 font-inter ${isVisible ? "animate-fadeInUp" : "opacity-0"}`}
-      data-movie-id={id}
     >
       {isLoading ? (
         <div className="relative bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
@@ -99,7 +136,7 @@ function MovieCard({
       ) : (
         <div className="relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 hover:shadow-2xl group hover:ring-2 hover:ring-purple-600/50">
           <div className="relative aspect-[2/3]">
-            <Link to={isTV ? `/tv/${id}` : `/movie/${id}`} aria-label={`View details for ${title}`}>
+            <Link to={linkTo} aria-label={`View details for ${title}`}>
               <img
                 src={imageUrl || "https://image.tmdb.org/t/p/w300/poster.jpg?text=No+Image"}
                 alt={`Poster for ${title}`}
@@ -107,39 +144,51 @@ function MovieCard({
               />
             </Link>
 
-            {showUncleScore && uncleScore !== null && (
+            {user && (
+              <button
+                onClick={toggleSave}
+                className={`absolute top-3 right-3 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold transition-all duration-200 transform hover:scale-110 shadow-md z-10 ${
+                  isSaved ? "bg-green-400 hover:bg-green-300 text-white" : "bg-gray-500 hover:bg-gray-400 text-white"
+                }`}
+                aria-label={isSaved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`}
+              >
+                {isSaved ? "✅" : "➕"}
+              </button>
+            )}
+
+            {showUncleScore && finalUncleScore != null && (
               <div
                 className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-bold rounded-lg px-3 py-1.5 shadow-xl animate-zoomIn border border-purple-200/30"
                 aria-live="polite"
               >
-                🎯 {uncleScore}
+                🎯 {finalUncleScore}
               </div>
             )}
-
-            <button
-              onClick={showRemoveButton ? onRemove : toggleSave}
-              className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-md bg-black/70 hover:bg-black/90 shadow-md z-20 transition-colors duration-200 ${
-                showRemoveButton
-                  ? "text-red-400 hover:text-red-300"
-                  : isSaved
-                  ? "text-green-400 hover:text-green-300"
-                  : "text-indigo-400 hover:text-indigo-300"
-              }`}
-              aria-label={showRemoveButton ? `Remove ${title} from watchlist` : isSaved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`}
-            >
-              {showRemoveButton ? "✖" : isSaved ? "✔" : "➕"}
-            </button>
+            {location.pathname === "/recommended" && isAdmin && onDelete && (
+              <button
+                onClick={handleAdminDelete}
+                className="absolute top-3 right-16 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-md bg-black/70 hover:bg-black/90 text-red-400 hover:text-red-300"
+              >
+                🗑
+              </button>
+            )}
           </div>
 
-          <div className="p-4 text-white space-y-3">
-            <h3 className="text-base font-bold line-clamp-1 group-hover:text-purple-300 transition-colors duration-200">{title}</h3>
+          <div className="p-4 text-white space-y-2">
+            <h3 className="text-base font-bold line-clamp-1 group-hover:text-purple-300 transition-colors duration-200">
+              {title}
+            </h3>
+
+            <div className="text-sm text-gray-300">
+              {year ? `${year} • ${type?.toUpperCase()}` : type?.toUpperCase()}
+            </div>
 
             {genres.length > 0 && (
               <div className="flex gap-1.5 flex-wrap">
                 {genres.slice(0, 2).map((genre) => (
                   <span
                     key={genre}
-                    className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200 transition-colors duration-200 group-hover:bg-purple-600/60"
+                    className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200"
                   >
                     {genre}
                   </span>
@@ -147,37 +196,15 @@ function MovieCard({
               </div>
             )}
 
-            {showUncleScore && uncleScore === null && !isLoading && (
-              <p className="text-sm text-gray-400">Score unavailable</p>
+            {language && (
+              <p className="text-sm text-gray-300">
+                🌐 {languageMap[language] || language?.toUpperCase() || "N/A"}
+              </p>
             )}
 
-            {onRate && (
-              <div className="flex items-center gap-1.5 text-yellow-400">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    onClick={() => onRate(star)}
-                    className={`cursor-pointer text-lg ${
-                      userRating && star <= Math.round(userRating)
-                        ? "text-yellow-400"
-                        : "text-gray-500"
-                    } hover:text-yellow-300 transition-transform duration-150 hover:animate-zoomIn`}
-                    aria-label={`Rate ${title} ${star} stars`}
-                  >
-                    ★
-                  </span>
-                ))}
-                {userRating && (
-                  <span className="text-sm text-gray-300 ml-2">
-                    ({userRating.toFixed(1)})
-                  </span>
-                )}
-              </div>
+            {showUncleScore && finalUncleScore == null && (
+              <p className="text-xs text-gray-500">Uncle Score unavailable</p>
             )}
-
-            <p className="text-sm text-gray-300">
-              🌐 {languageMap[language] || language?.toUpperCase() || "N/A"}
-            </p>
           </div>
         </div>
       )}
