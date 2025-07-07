@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route,Link } from "react-router-dom";
+import { Routes, Route, Link } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -14,12 +14,11 @@ import Recommended from "./pages/Recommended";
 import Genres from "./pages/Genres";
 import CastDetail from "./pages/CastDetail";
 import Trending from "./pages/Trending";
-
 import ChatAssistant from "./pages/ChatAssistant";
+import { LoadingProvider } from "./context/LoadingContext";
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
-  const [showAssistant, setShowAssistant] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -40,8 +39,9 @@ function App() {
   };
 
   return (
-    <>
+    <LoadingProvider>
       <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/genres" element={<Genres />} />
@@ -58,16 +58,15 @@ function App() {
         <Route path="/trending" element={<Trending />} />
         <Route path="/assistant" element={<ChatAssistant />} />
       </Routes>
-      <Link
-  to="/assistant"
-  className="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition z-50"
->
-  💬 Ask Assistant
-</Link>
 
-    </>
+      <Link
+        to="/assistant"
+        className="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition z-50"
+      >
+        💬 Ask Assistant
+      </Link>
+    </LoadingProvider>
   );
 }
-
 
 export default App;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import API_BASE from "../utils/api"; // adjust path if needed
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || "";
 
 function HeroSection() {
   const [heroMovie, setHeroMovie] = useState(null);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import MovieCard from "../components/MovieCard";
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
 function TVShows() {
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState(null);

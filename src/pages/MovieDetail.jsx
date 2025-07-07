@@ -15,7 +15,7 @@ import { fetchOMDbData } from "../api/omdb";
 import { db } from "../firebase";
 import { auth } from "../firebase";
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
 
 function MovieDetail() {
   const { id } = useParams();

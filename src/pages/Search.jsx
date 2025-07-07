@@ -14,8 +14,8 @@ import {
 } from "firebase/firestore";
 import MovieCard from "../components/MovieCard";
 import genreMap from "../utils/GenreMap";
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
-
+import API_BASE from "../utils/api";
+import { useLoading } from "../context/LoadingContext";
 
 function Search() {
   const location = useLocation();
@@ -29,7 +29,9 @@ function Search() {
   const [isListening, setIsListening] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const recognitionRef = useRef(null);
+  const selectedSuggestionRef = useRef(null);
   const user = auth.currentUser;
+  const { setIsLoading } = useLoading();
 
   useEffect(() => {
     if (initialQuery.trim()) {
@@ -65,12 +67,19 @@ function Search() {
 
   useEffect(() => {
     const fetchRandomMovies = async () => {
-      const randomPage = Math.floor(Math.random() * 10) + 1;
-      const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
+      setIsLoading(true);
+      try {
+        const randomPage = Math.floor(Math.random() * 10) + 1;
+        const res = await fetch(`${API_BASE}/api/tmdb/discover?page=${randomPage}`);
 
-      const data = await res.json();
-      const filtered = data.filter((m) => m.adult === false);
-      setResults(filtered);
+        const data = await res.json();
+        const filtered = data.filter((m) => m.adult === false);
+        setResults(filtered);
+      } catch (e) {
+        console.error("Failed to fetch random movies:", e);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     if (queryText.trim() === "") {
@@ -101,13 +110,19 @@ function Search() {
   }, [queryText, inputFocused]);
 
   const searchTMDB = async (term) => {
-    const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
+    if (!term || term === queryText.trim().toLowerCase()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/tmdb/search?q=${term}`);
 
-    const data = await res.json();
-    const filtered = (data.results || []).filter(
-      (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult
-    );
-    setResults(filtered);
+      const data = await res.json();
+      const filtered = (data.results || []).filter(
+        (m) => (m.media_type === "movie" || m.media_type === "tv") && !m.adult
+      );
+      setResults(filtered);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSearch = async (e) => {
@@ -294,7 +309,10 @@ function Search() {
 
       <div className="flex flex-wrap gap-4">
         {results.length === 0 ? (
-          <p className="text-gray-400">No results found.</p>
+          <div className="text-center text-gray-400 mt-6">
+            <p>No results found for "<span className="italic">{queryText}</span>".</p>
+            <p className="mt-2">Try different keywords or explore trending content instead.</p>
+          </div>
         ) : (
           results.map((item) => (
             <MovieCard

@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
 import genreMap from "../utils/GenreMap";
+import API_BASE from "../utils/api"; // adjust path if needed
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 function HollywoodSection() {
   const [movies, setMovies] = useState([]);

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import MovieCard from "../components/MovieCard";
+import { useLoading } from "../context/LoadingContext";
 
 function ChatAssistant() {
   const [messages, setMessages] = useState([
@@ -15,35 +16,40 @@ function ChatAssistant() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async userMessage => {
-    if (!userMessage || userMessage.trim() === "") return;
+const { setIsLoading } = useLoading();
 
-    setMessages(prev => [...prev, { text: userMessage, sender: "user" }]);
-    setLoading(true);
+const sendMessage = async (userMessage) => {
+  if (!userMessage || userMessage.trim() === "") return;
 
-    try {
-      const res = await fetch(`https://what2watch-server.onrender.com/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, sessionId })
-      });
-      const data = await res.json();
+  setMessages((prev) => [...prev, { text: userMessage, sender: "user" }]);
+  setLoading(true);
+  setIsLoading(true); // Start global shimmer
 
-      const botReply = Array.isArray(data.reply)
-        ? { text: data.reply, sender: "bot", isMovieList: true }
-        : { text: data.reply, sender: "bot" };
+  try {
+    const res = await fetch(`https://what2watch-server.onrender.com/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userMessage, sessionId }),
+    });
+    const data = await res.json();
 
-      setMessages(prev => [...prev, botReply]);
-    } catch {
-      setMessages(prev => [
-        ...prev,
-        { text: "❌ Sorry, something went wrong.", sender: "bot" }
-      ]);
-    } finally {
-      setLoading(false);
-      setInput("");
-    }
-  };
+    const botReply = Array.isArray(data.reply)
+      ? { text: data.reply, sender: "bot", isMovieList: true }
+      : { text: data.reply, sender: "bot" };
+
+    setMessages((prev) => [...prev, botReply]);
+  } catch {
+    setMessages((prev) => [
+      ...prev,
+      { text: "❌ Sorry, something went wrong.", sender: "bot" },
+    ]);
+  } finally {
+    setLoading(false);
+    setIsLoading(false); // End shimmer
+    setInput("");
+  }
+};
+
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-800 p-2 sm:p-4">

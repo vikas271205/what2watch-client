@@ -4,9 +4,11 @@ export function calculateUncleScore(tmdb, imdb, rt) {
   const rtScore = rt?.endsWith('%') ? Number(rt.replace('%', '')) : 0;
 
   const validScores = [tmdbScore, imdbScore, rtScore].filter(n => n > 0);
-  if (validScores.length === 0) return null;
+  if (validScores.length === 0) {
+    // Fallback to TMDB score if available, otherwise return 0
+    return tmdb && Number(tmdb) > 0 ? Math.round(Number(tmdb) * 10) / 10 : 0;
+  }
 
   const average = validScores.reduce((a, b) => a + b, 0) / validScores.length;
-  return Math.round(average) / 10; // 8.4
- // Uncle score is out of 10
+  return Math.round(average) / 10; // Uncle score is out of 10
 }

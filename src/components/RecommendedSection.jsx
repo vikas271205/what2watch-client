@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import MovieCard from "../components/MovieCard";
 import { calculateUncleScore } from "../utils/uncleScore";
 import genreMap from "../utils/GenreMap";
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api"; // adjust path if needed
+
 
 function Recommended() {
   const [recommended, setRecommended] = useState([]);

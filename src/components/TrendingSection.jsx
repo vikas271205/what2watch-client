@@ -1,11 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api"; // adjust path if needed
+import { useLoading } from "../context/LoadingContext";
+
 
 function TrendingSection() {
   const [movies, setMovies] = useState([]);
   const [genreMap, setGenreMap] = useState({});
   const scrollRef = useRef();
+  const { setIsLoading } = useLoading();
 
   // 🔹 Fetch genre map from backend
   useEffect(() => {
@@ -30,6 +33,7 @@ function TrendingSection() {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
+        setIsLoading(true);
         const res = await fetch(`${API_BASE}/api/tmdb/trending?time=week`);
         const data = await res.json();
 
@@ -51,7 +55,9 @@ function TrendingSection() {
       } catch (err) {
         console.error("Failed to fetch trending movies:", err);
         setMovies([]);
-      }
+      }finally {
+    setIsLoading(false); // ✅ Add this line
+  }
     };
 
     if (Object.keys(genreMap).length > 0) {

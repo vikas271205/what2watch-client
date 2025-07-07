@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import MovieCard from "../components/MovieCard";
+import { useLoading } from "../context/LoadingContext";
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
 
 function Genres() {
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [movies, setMovies] = useState([]);
   const [genreMap, setGenreMap] = useState({});
+  const { setIsLoading } = useLoading();
 
-  useEffect(() => {
-    const fetchGenres = async () => {
+useEffect(() => {
+  const fetchGenres = async () => {
+    try {
+      setIsLoading(true);
       const res = await fetch(`${API_BASE}/api/tmdb/genres`);
       const data = await res.json();
 
@@ -22,15 +26,23 @@ function Genres() {
         map[g.id] = g.name;
       });
       setGenreMap(map);
-    };
+    } catch (e) {
+      console.error("Failed to fetch genres", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchGenres();
-  }, []);
+  fetchGenres();
+}, []);
 
-  useEffect(() => {
-    const fetchMoviesByGenre = async () => {
-      if (!selectedGenre) return;
 
+useEffect(() => {
+  const fetchMoviesByGenre = async () => {
+    if (!selectedGenre) return;
+
+    try {
+      setIsLoading(true);
       const res = await fetch(`${API_BASE}/api/tmdb/byGenre?genreId=${selectedGenre.id}`);
       const data = await res.json();
 
@@ -45,10 +57,16 @@ function Genres() {
       }
 
       setMovies(filteredMovies.slice(0, 18));
-    };
+    } catch (e) {
+      console.error("Failed to fetch genre movies", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchMoviesByGenre();
-  }, [selectedGenre]);
+  fetchMoviesByGenre();
+}, [selectedGenre]);
+
 
   return (
     <main className="bg-white text-black dark:bg-zinc-900 dark:text-white">

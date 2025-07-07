@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api"; // adjust path if needed
+
 
 function TVSection() {
   const [tvShows, setTVShows] = useState([]);
