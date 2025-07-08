@@ -11,7 +11,7 @@ function Navbar() {
   const navigate = useNavigate();
   const auth = getAuth();
   const [darkMode, setDarkMode] = useDarkMode();
-  const { isAdmin } = useAdminClaim(); // ✅
+  const { isAdmin } = useAdminClaim();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -28,7 +28,7 @@ function Navbar() {
       <div className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-indigo-400 to-purple-600 bg-clip-text text-transparent">
-          What2Watch
+          UncleFilmFinder
         </Link>
 
         {/* Mobile Controls */}
@@ -106,7 +106,7 @@ function Navbar() {
           <Link to="/genres" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Genres</Link>
           <Link to="/watchlist" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Watchlist</Link>
           <Link to="/tvshows" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">TV Shows</Link>
-          <Link to="/recommended" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Recommended</Link>
+          <Link to="/unclespick" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Uncle's Pick</Link>
           {isAdmin && <Link to="/admin/recommend" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400 font-semibold">Admin</Link>}
 
           {!user ? (

@@ -6,9 +6,9 @@ function Footer() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {/* Column 1: Logo + Intro */}
         <div>
-          <h2 className="text-white text-2xl font-bold mb-3">🎬 What2Watch</h2>
+          <h2 className="text-white text-2xl font-bold mb-3">🎬 UncleFilmFinder</h2>
           <p className="text-sm leading-relaxed">
-            Your AI-powered guide for discovering trending movies and shows.
+            Your AI-powered guide to discovering trending movies, TV shows, and hidden gems.
           </p>
         </div>
 
@@ -42,7 +42,7 @@ function Footer() {
         {/* Column 3: Contact + Socials */}
         <div>
           <h3 className="text-white font-semibold text-lg mb-3">Contact</h3>
-          <p className="text-sm mb-2">📧 hello@what2watch.com</p>
+          <p className="text-sm mb-2">📧 hello@unclefilmfinder.com</p>
           <div className="flex gap-4 mt-3">
             <a href="https://github.com/" target="_blank" rel="noopener noreferrer">
               <img src="/icons/github.svg" alt="GitHub" className="w-5 h-5 hover:opacity-80" />
@@ -50,13 +50,12 @@ function Footer() {
             <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer">
               <img src="/icons/twitter.svg" alt="Twitter" className="w-5 h-5 hover:opacity-80" />
             </a>
-            {/* Add more icons as needed */}
           </div>
         </div>
       </div>
 
       <div className="text-center text-xs text-gray-600 mt-10">
-        © 2025 What2Watch. All rights reserved.
+        © 2025 UncleFilmFinder. All rights reserved.
       </div>
     </footer>
   );
