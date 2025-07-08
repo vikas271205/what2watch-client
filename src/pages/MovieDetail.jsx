@@ -144,17 +144,28 @@ function MovieDetail() {
       <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-600"></div>
     </div>
   );
+  console.log("movie", movie);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
-      {movie.backdrop_path && (
-        <div
-          className="fixed top-0 left-0 w-full h-full bg-cover bg-center filter blur-md opacity-30 -z-10"
-          style={{
-            backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
-          }}
-        />
-      )}
+    <div className="relative min-h-screen text-white">
+
+{movie.backdrop_path && (
+  <div className="absolute inset-0 -z-10">
+    {/* Blurred background image */}
+    <div
+      className="w-full h-full bg-cover bg-center filter blur-sm opacity-60"
+      style={{
+        backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
+      }}
+    />
+    {/* Gradient overlay */}
+    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
+  </div>
+)}
+
+
+
+
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-16 sm:pt-20">
         <motion.div
