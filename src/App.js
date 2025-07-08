@@ -18,6 +18,7 @@ import ChatAssistant from "./pages/ChatAssistant";
 import { LoadingProvider } from "./context/LoadingContext";
 import AdminRecommend from "./pages/AdminRecommend";
 import AdminRoute from "./components/AdminRoute";
+import UnclesPick from "./pages/UnclesPick";
 function App() {
   const [darkMode, setDarkMode] = useState(false);
 
@@ -46,7 +47,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/genres" element={<Genres />} />
-        <Route path="/recommended" element={<Recommended />} />
+        <Route path="/unclespick" element={<UnclesPick />} />
         <Route path="/tvshows" element={<TVShows />} />
         <Route path="/tv/:id" element={<TVDetail />} />
         <Route path="/movie/:id" element={<MovieDetail />} />

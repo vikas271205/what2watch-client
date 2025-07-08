@@ -60,7 +60,7 @@ function Navbar() {
           <Link to="/genres" className="hover:text-indigo-400">Genres</Link>
           <Link to="/watchlist" className="hover:text-indigo-400">Watchlist</Link>
           <Link to="/tvshows" className="hover:text-indigo-400">TV Shows</Link>
-          <Link to="/recommended" className="hover:text-indigo-400">Recommended</Link>
+          <Link to="/unclespick" className="hover:text-indigo-400">Uncle's Pick</Link>
           {isAdmin && <Link to="/admin/recommend" className="hover:text-yellow-400 font-semibold">Admin</Link>}
 
           <button
