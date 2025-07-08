@@ -59,7 +59,9 @@ function MovieDetail() {
           ...m,
           tmdbRating: m.vote_average?.toString(),
           language: m.original_language,
-          genres: m.genre_ids?.map(id => movieData.genres.find(g => g.id === id)?.name || ""),
+          genres: m.genre_ids
+            ?.map(id => movieData.genres.find(g => g.id === id)?.name)
+            .filter(Boolean),
         })));
 
         if (user) {

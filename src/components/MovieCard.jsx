@@ -185,14 +185,14 @@ function MovieCard({
 
             {genres.length > 0 && (
               <div className="flex gap-1.5 flex-wrap">
-                {genres.slice(0, 2).map((genre) => (
-                  <span
-                    key={genre}
-                    className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200"
-                  >
-                    {genre}
-                  </span>
-                ))}
+                {genres.slice(0, 2).map((genre, i) => (
+  genre && (
+    <span key={`${genre}-${i}`} className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200">
+      {genre}
+    </span>
+  )
+))}
+
               </div>
             )}
 
