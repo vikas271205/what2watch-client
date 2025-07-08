@@ -48,8 +48,8 @@ function CastDetail() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6 max-w-6xl mx-auto">
-      {/* Profile Header */}
+    <main className="min-h-screen">
+            {/* Profile Header */}
       <motion.div
         className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start"
         initial={{ opacity: 0, y: 20 }}
@@ -139,7 +139,7 @@ function CastDetail() {
           }
         `}
       </style>
-    </div>
+     </main>
   );
 }
 

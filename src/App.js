@@ -19,6 +19,7 @@ import { LoadingProvider } from "./context/LoadingContext";
 import AdminRecommend from "./pages/AdminRecommend";
 import AdminRoute from "./components/AdminRoute";
 import UnclesPick from "./pages/UnclesPick";
+import ThemeLayout from "./components/ThemeLayout";
 function App() {
   const [darkMode, setDarkMode] = useState(false);
 
@@ -45,6 +46,7 @@ function App() {
       <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       <Routes>
+        <Route element={<ThemeLayout />}></Route>
         <Route path="/" element={<Home />} />
         <Route path="/genres" element={<Genres />} />
         <Route path="/unclespick" element={<UnclesPick />} />

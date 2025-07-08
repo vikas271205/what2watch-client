@@ -210,9 +210,9 @@ function Search() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-white text-black dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-800 dark:text-white px-4 sm:px-6 py-6 transition-colors duration-300">
       <motion.h2
-        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 sticky top-0 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -223,7 +223,7 @@ function Search() {
       <div className="relative mb-6 sm:mb-8 z-20">
         <form
           onSubmit={handleSearch}
-          className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 sticky top-12 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+          className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 sticky top-12 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2"
         >
           <div className="relative flex-1">
             <input
@@ -234,13 +234,13 @@ function Search() {
               onChange={(e) => setQueryText(e.target.value)}
               onFocus={() => setInputFocused(true)}
               onKeyDown={(e) => e.key === "Enter" && setSuggestions([])}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-800 border border-gray-700 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm sm:text-base text-black dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               aria-label="Search input"
             />
             {suggestions.length > 0 && inputFocused && queryText && (
               <motion.ul
                 ref={suggestionRef}
-                className="absolute top-full mt-1 w-full bg-gray-800 border border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800"
+                className="absolute top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800 z-50"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -248,7 +248,7 @@ function Search() {
                 {suggestions.map((sug) => (
                   <li
                     key={sug.id}
-                    className="px-3 sm:px-4 py-2 hover:bg-gray-700 cursor-pointer text-sm sm:text-base"
+                    className="px-3 sm:px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer text-sm sm:text-base text-black dark:text-white"
                     onMouseDown={() => {
                       setQueryText(sug.title || sug.name);
                       searchTMDB(sug.title || sug.name);
@@ -264,7 +264,7 @@ function Search() {
           <div className="flex gap-2 w-full sm:w-auto">
             <motion.button
               type="submit"
-              className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-indigo-600 text-sm sm:text-base font-semibold"
+              className="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-indigo-600 text-sm sm:text-base font-semibold text-white"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               aria-label="Search"
@@ -274,8 +274,8 @@ function Search() {
             <motion.button
               type="button"
               onClick={toggleListening}
-              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm sm:text-base font-semibold border border-gray-700 ${
-                isListening ? "bg-red-600 animate-pulse" : "bg-gray-800"
+              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm sm:text-base font-semibold border dark:border-gray-700 border-gray-300 ${
+                isListening ? "bg-red-600 animate-pulse text-white" : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
               }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -295,10 +295,10 @@ function Search() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex justify-between items-center mb-2 sm:mb-3">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-300">Recent Searches</h3>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-300">Recent Searches</h3>
             <motion.button
               onClick={handleClearAll}
-              className="text-sm sm:text-base text-red-400 hover:underline"
+              className="text-sm sm:text-base text-red-500 hover:underline"
               whileHover={{ scale: 1.05 }}
               aria-label="Clear search history"
             >
@@ -309,21 +309,21 @@ function Search() {
             {history.map(({ term }, index) => term && (
               <div
                 key={index}
-                className="flex items-center bg-gray-800 text-sm sm:text-base px-3 sm:px-4 py-1 sm:py-2 rounded-full"
+                className="flex items-center bg-gray-200 dark:bg-gray-800 text-sm sm:text-base px-3 sm:px-4 py-1 sm:py-2 rounded-full"
               >
                 <button
                   onClick={() => {
                     setQueryText(term);
                     searchTMDB(term);
                   }}
-                  className="hover:underline mr-2"
+                  className="hover:underline mr-2 text-black dark:text-white"
                   aria-label={`Search for ${term}`}
                 >
                   {term}
                 </button>
                 <motion.button
                   onClick={() => handleRemoveTerm(term)}
-                  className="text-red-400 hover:text-red-500"
+                  className="text-red-500 hover:text-red-600"
                   whileHover={{ scale: 1.1 }}
                   aria-label={`Remove ${term} from history`}
                 >
@@ -340,12 +340,12 @@ function Search() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-200">
+        <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-900 dark:text-gray-200">
           {queryText.trim() ? `Results for "${queryText}"` : "🎲 Discover Random Popular Movies"}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {results.length === 0 ? (
-            <p className="text-gray-400 text-sm sm:text-base col-span-full">No results found.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base col-span-full">No results found.</p>
           ) : (
             results.map((item) => (
               <MovieCard
@@ -364,6 +364,7 @@ function Search() {
       </motion.div>
     </div>
   );
+
 }
 
 export default Search;

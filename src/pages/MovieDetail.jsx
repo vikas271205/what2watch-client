@@ -147,27 +147,22 @@ function MovieDetail() {
   console.log("movie", movie);
 
   return (
-    <div className="relative min-h-screen text-white">
+    <div className="relative min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
 
-{movie.backdrop_path && (
-  <div className="absolute inset-0 -z-10">
-    {/* Blurred background image */}
-    <div
-      className="w-full h-full bg-cover bg-center filter blur-sm opacity-60"
-      style={{
-        backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
-      }}
-    />
-    {/* Gradient overlay */}
-    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
-  </div>
-)}
-
-
-
-
+      {movie.backdrop_path && (
+        <div className="absolute inset-0 -z-10">
+          <div
+            className="w-full h-full bg-cover bg-center filter blur-sm opacity-60"
+            style={{
+              backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})`,
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pt-16 sm:pt-20">
+        {/* Movie Info */}
         <motion.div
           className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6"
           initial={{ opacity: 0, y: 20 }}
@@ -190,7 +185,7 @@ function MovieDetail() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
               {movie.title}
             </h1>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-gray-400">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-gray-600 dark:text-gray-400">
               <p className="text-sm sm:text-base font-semibold">
                 {movie.release_date?.slice(0, 4)} • {movie.runtime} mins
               </p>
@@ -199,31 +194,29 @@ function MovieDetail() {
                   <span
                     key={g.id}
                     className="px-2 sm:px-3 py-1 rounded-full bg-indigo-600 text-xs sm:text-sm text-white"
-                    aria-label={`Genre: ${g.name}`}
                   >
                     {g.name}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 sm:gap-4 text-gray-300">
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-gray-700 dark:text-gray-300">
               <div className="flex items-center space-x-2">
                 <span className="font-semibold text-sm sm:text-base">TMDB:</span>
-                <span className="text-yellow-400 font-bold text-sm sm:text-base">
+                <span className="text-yellow-500 font-bold text-sm sm:text-base">
                   {movie.vote_average?.toFixed(1)}
                 </span>
-                <span className="text-gray-500 text-xs sm:text-sm">({movie.vote_count} votes)</span>
+                <span className="text-xs sm:text-sm text-gray-400">({movie.vote_count} votes)</span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <motion.button
                 onClick={toggleWatchlist}
                 className={`px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold transition-colors ${
-                  isSaved ? "bg-green-600" : "bg-gray-700"
+                  isSaved ? "bg-green-600" : "bg-gray-700 dark:bg-gray-800"
                 }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                aria-label={isSaved ? "Remove from watchlist" : "Add to watchlist"}
               >
                 {isSaved ? "In Watchlist ✅" : "Add to Watchlist"}
               </motion.button>
@@ -231,10 +224,9 @@ function MovieDetail() {
                 value={userRating}
                 onChange={(e) => handleRating(Number(e.target.value))}
                 disabled={!isSaved}
-                className="bg-gray-800 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base text-white cursor-pointer"
+                className="bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base dark:text-white text-black cursor-pointer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                aria-label="Rate movie"
               >
                 <option value="0">Rate</option>
                 {[...Array(10)].map((_, i) => (
@@ -244,21 +236,21 @@ function MovieDetail() {
                 ))}
               </motion.select>
               <motion.button
-                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-700 opacity-50 cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-700 dark:bg-gray-800 opacity-50 cursor-not-allowed"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 disabled
-                aria-label="Available on (coming soon)"
               >
                 Available On
               </motion.button>
             </div>
-            <p className="text-sm sm:text-base leading-relaxed text-gray-300 max-w-2xl line-clamp-6">
+            <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300 max-w-2xl line-clamp-6">
               {movie.overview}
             </p>
           </div>
         </motion.div>
 
+        {/* Trailer */}
         {trailerUrl && (
           <motion.section
             className="mt-8 sm:mt-10"
@@ -278,6 +270,7 @@ function MovieDetail() {
           </motion.section>
         )}
 
+        {/* Cast */}
         {cast.length > 0 && (
           <motion.section
             className="mt-8 sm:mt-10"
@@ -291,8 +284,7 @@ function MovieDetail() {
                 <Link
                   key={member.id}
                   to={`/person/${member.id}`}
-                  className="flex-shrink-0 w-32 sm:w-40 rounded-lg overflow-hidden bg-gray-800 shadow-lg"
-                  aria-label={`View ${member.name} profile`}
+                  className="flex-shrink-0 w-32 sm:w-40 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 shadow-lg"
                 >
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -309,7 +301,7 @@ function MovieDetail() {
                       className="w-full h-40 sm:h-48 object-cover"
                       loading="lazy"
                     />
-                    <p className="text-center p-2 text-xs sm:text-sm font-medium text-gray-200 line-clamp-2">
+                    <p className="text-center p-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 line-clamp-2">
                       {member.name}
                     </p>
                   </motion.div>
@@ -319,6 +311,7 @@ function MovieDetail() {
           </motion.section>
         )}
 
+        {/* Related Movies */}
         {relatedMovies.length > 0 && (
           <motion.section
             className="mt-8 sm:mt-10"
@@ -343,6 +336,7 @@ function MovieDetail() {
           </motion.section>
         )}
 
+        {/* Comments */}
         <motion.section
           className="mt-8 sm:mt-10"
           initial={{ opacity: 0 }}
@@ -356,15 +350,13 @@ function MovieDetail() {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Leave a comment..."
-                className="flex-1 px-3 sm:px-4 py-2 rounded-lg bg-gray-800 text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                aria-label="Comment input"
+                className="flex-1 px-3 sm:px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm sm:text-base text-black dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
               />
               <motion.button
                 onClick={submitComment}
-                className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-sm sm:text-base font-medium"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-sm sm:text-base font-medium text-white"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                aria-label="Post comment"
               >
                 Post
               </motion.button>
@@ -375,21 +367,20 @@ function MovieDetail() {
               {allComments.slice(0, showAllComments ? undefined : 3).map((c) => (
                 <motion.li
                   key={c.timestamp}
-                  className="bg-gray-800 p-3 sm:p-4 rounded-xl shadow-lg"
+                  className="bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-lg"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
                 >
                   <p className="text-xs sm:text-sm text-gray-500 mb-1 font-semibold">{c.userEmail}</p>
-                  <p className="text-sm sm:text-base text-gray-300 whitespace-pre-line">{c.comment}</p>
+                  <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 whitespace-pre-line">{c.comment}</p>
                 </motion.li>
               ))}
               {allComments.length > 3 && (
                 <motion.button
                   onClick={() => setShowAllComments(!showAllComments)}
-                  className="text-indigo-400 hover:underline text-sm sm:text-base"
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm sm:text-base"
                   whileHover={{ scale: 1.05 }}
-                  aria-label={showAllComments ? "Show fewer comments" : "Show all comments"}
                 >
                   {showAllComments ? "Show Fewer" : `Show All (${allComments.length})`}
                 </motion.button>
@@ -400,23 +391,9 @@ function MovieDetail() {
           )}
         </motion.section>
       </div>
-
-      <style>
-        {`
-          .scrollbar-thin::-webkit-scrollbar {
-            height: 8px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-thumb {
-            background-color: #6366f1;
-            border-radius: 4px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-track {
-            background-color: #1f2937;
-          }
-        `}
-      </style>
     </div>
   );
+
 }
 
 export default MovieDetail;

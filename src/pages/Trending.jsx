@@ -69,9 +69,9 @@ function Trending() {
   }, [page, filter, setIsLoading]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-white text-black dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-800 dark:text-white px-4 sm:px-6 py-6 transition-colors duration-300">
       <motion.h1
-        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2 text-black dark:text-white"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -79,13 +79,15 @@ function Trending() {
         🔥 Trending Content
       </motion.h1>
 
-      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-gray-900/80 backdrop-blur-sm z-10 py-2">
+      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2">
         {Object.entries(timeFilters).map(([key, label]) => (
           <motion.button
             key={key}
             onClick={() => setFilter(key)}
             className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition ${
-              key === filter ? "bg-indigo-600" : "bg-gray-800 hover:bg-gray-700"
+              key === filter
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-200 text-black hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
             }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -129,7 +131,7 @@ function Trending() {
         >
           <motion.button
             onClick={() => setPage((prev) => prev + 1)}
-            className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-indigo-600 text-sm sm:text-base font-semibold"
+            className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-indigo-600 text-sm sm:text-base font-semibold text-white"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="Load more content"
@@ -140,14 +142,15 @@ function Trending() {
       )}
 
       {localLoading && (
-        <p className="text-gray-400 text-center mt-6 text-sm sm:text-base">Loading more...</p>
+        <p className="text-gray-600 dark:text-gray-400 text-center mt-6 text-sm sm:text-base">Loading more...</p>
       )}
 
       {!hasMore && !localLoading && (
-        <p className="text-gray-500 text-center mt-6 text-sm sm:text-base">You have reached the end.</p>
+        <p className="text-gray-700 dark:text-gray-500 text-center mt-6 text-sm sm:text-base">You have reached the end.</p>
       )}
     </div>
   );
+
 }
 
 export default Trending;

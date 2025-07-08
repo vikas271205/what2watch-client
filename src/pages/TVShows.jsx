@@ -82,97 +82,101 @@ function TVShows() {
     fetchShowsByGenre();
   }, [selectedGenre, page, genres, setIsLoading]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6">
-      <motion.h1
-        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+return (
+  <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-200 dark:from-gray-900 dark:via-black dark:to-gray-800 text-black dark:text-white px-4 sm:px-6 py-6">
+    <motion.h1
+      className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      📺 TV Shows
+    </motion.h1>
+
+    <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2">
+      {genres.map((genre) => (
+        <motion.button
+          key={genre.id}
+          onClick={() => {
+            setSelectedGenre(genre);
+            setShows([]);
+            setPage(1);
+            setHasMore(true);
+          }}
+          className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition ${
+            selectedGenre?.id === genre.id
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={`Select ${genre.name} genre`}
+        >
+          {genre.name}
+        </motion.button>
+      ))}
+    </div>
+
+    {selectedGenre && (
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4 text-indigo-600 dark:text-indigo-400">
+          🎬 {selectedGenre.name} Shows
+        </h2>
+
+        {shows.length === 0 && !localLoading ? (
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No shows found.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {shows.map((show) => (
+              <MovieCard
+                key={show.id}
+                id={show.id}
+                title={show.name}
+                imageUrl={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
+                tmdbRating={show.tmdbRating}
+                genres={show.genres}
+                language={show.original_language}
+                isTV={true}
+              />
+            ))}
+          </div>
+        )}
+      </motion.section>
+    )}
+
+    {hasMore && !localLoading && (
+      <motion.div
+        className="text-center mt-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        📺 TV Shows
-      </motion.h1>
-
-      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-gray-900/80 backdrop-blur-sm z-10 py-2">
-        {genres.map((genre) => (
-          <motion.button
-            key={genre.id}
-            onClick={() => {
-              setSelectedGenre(genre);
-              setShows([]);
-              setPage(1);
-              setHasMore(true);
-            }}
-            className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition ${
-              selectedGenre?.id === genre.id ? "bg-indigo-600" : "bg-gray-800 hover:bg-gray-700"
-            }`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label={`Select ${genre.name} genre`}
-          >
-            {genre.name}
-          </motion.button>
-        ))}
-      </div>
-
-      {selectedGenre && (
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+        <motion.button
+          onClick={() => setPage((prev) => prev + 1)}
+          className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-indigo-600 text-white text-sm sm:text-base font-semibold"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Load more shows"
         >
-          <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4 text-indigo-400">
-            🎬 {selectedGenre.name} Shows
-          </h2>
-          {shows.length === 0 && !localLoading ? (
-            <p className="text-sm sm:text-base text-gray-400">No shows found.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {shows.map((show) => (
-                <MovieCard
-                  key={show.id}
-                  id={show.id}
-                  title={show.name}
-                  imageUrl={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
-                  tmdbRating={show.tmdbRating}
-                  genres={show.genres}
-                  language={show.original_language}
-                  isTV={true}
-                />
-              ))}
-            </div>
-          )}
-        </motion.section>
-      )}
+          Load More
+        </motion.button>
+      </motion.div>
+    )}
 
-      {hasMore && !localLoading && (
-        <motion.div
-          className="text-center mt-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.button
-            onClick={() => setPage((prev) => prev + 1)}
-            className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-indigo-600 text-sm sm:text-base font-semibold"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="Load more shows"
-          >
-            Load More
-          </motion.button>
-        </motion.div>
-      )}
+    {localLoading && (
+      <p className="text-gray-600 dark:text-gray-400 text-center mt-6 text-sm sm:text-base">Loading more...</p>
+    )}
 
-      {localLoading && (
-        <p className="text-gray-400 text-center mt-6 text-sm sm:text-base">Loading more...</p>
-      )}
+    {!hasMore && !localLoading && (
+      <p className="text-gray-700 dark:text-gray-500 text-center mt-6 text-sm sm:text-base">You have reached the end.</p>
+    )}
+  </div>
+);
 
-      {!hasMore && !localLoading && (
-        <p className="text-gray-500 text-center mt-6 text-sm sm:text-base">You have reached the end.</p>
-      )}
-    </div>
-  );
 }
 
 export default TVShows;

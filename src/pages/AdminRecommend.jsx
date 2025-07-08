@@ -161,226 +161,218 @@ export default function AdminRecommend() {
     );
   }
 
-  return (
-    <div className="relative min-h-screen bg-gradient-to-b from-gray-900 to-black text-white pt-4">
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto relative z-10">
-        <motion.h1
-          className="text-4xl sm:text-5xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          🎯 Admin – Add to UNCLE's PICK
-        </motion.h1>
+return (
+  <div className="relative min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-900 dark:to-black text-black dark:text-white pt-4">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto relative z-10">
+      <motion.h1
+        className="text-4xl sm:text-5xl font-bold mb-4 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-600"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        🎯 Admin – Add to UNCLE's PICK
+      </motion.h1>
 
-        <motion.div
-          className="relative flex flex-wrap gap-4 mb-6 justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <div className="relative flex-grow">
-            <motion.input
-              ref={inputRef}
-              type="text"
-              placeholder="Search movie or TV show..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  searchTMDB();
-                  setSuggestions([]);
-                }
-              }}
-              onFocus={() => query.trim() && searchTMDB()}
-              className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 hover:bg-gray-700"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            />
-            {suggestions.length > 0 && (
-              <motion.ul
-                ref={suggestionRef}
-                className="absolute z-20 w-full bg-gray-800 border border-gray-600 rounded-lg mt-1 max-h-60 overflow-y-auto scrollbar-thin"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {suggestions.map((suggestion) => (
-                  <li
-                    key={`${suggestion.media_type}_${suggestion.id}`}
-                    className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white"
-                    onClick={() => handleSuggestionClick(suggestion)}
-                  >
-                    {suggestion.title || suggestion.name} ({suggestion.media_type === "movie" ? "Movie" : "TV"})
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </div>
-          <motion.button
-            onClick={() => {
-              searchTMDB();
-              setSuggestions([]);
+      <motion.div
+        className="relative flex flex-wrap gap-4 mb-6 justify-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+        <div className="relative flex-grow">
+          <motion.input
+            ref={inputRef}
+            type="text"
+            placeholder="Search movie or TV show..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                searchTMDB();
+                setSuggestions([]);
+              }
             }}
-            className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all duration-300"
+            onFocus={() => query.trim() && searchTMDB()}
+            className="w-full px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white border border-gray-400 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          />
+          {suggestions.length > 0 && (
+            <motion.ul
+              ref={suggestionRef}
+              className="absolute z-20 w-full bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 rounded-lg mt-1 max-h-60 overflow-y-auto scrollbar-thin"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {suggestions.map((suggestion) => (
+                <li
+                  key={`${suggestion.media_type}_${suggestion.id}`}
+                  className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-black dark:text-white"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                >
+                  {suggestion.title || suggestion.name} ({suggestion.media_type === "movie" ? "Movie" : "TV"})
+                </li>
+              ))}
+            </motion.ul>
+          )}
+        </div>
+
+        <motion.button
+          onClick={() => {
+            searchTMDB();
+            setSuggestions([]);
+          }}
+          className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all duration-300"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Search
+        </motion.button>
+      </motion.div>
+
+      <motion.div
+        className="mb-6 flex justify-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
+        <div className="flex items-center gap-3">
+          <label className="text-lg font-medium text-purple-600 dark:text-purple-300">Filter by Type:</label>
+          <motion.select
+            value={mediaType}
+            onChange={(e) => setMediaType(e.target.value)}
+            className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-black dark:text-white border border-gray-400 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 hover:bg-gray-300 dark:hover:bg-gray-700"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Search
-          </motion.button>
-        </motion.div>
+            <option value="">All</option>
+            <option value="movie">Movie</option>
+            <option value="tv">TV</option>
+            <option value="animation">Animation</option>
+          </motion.select>
+        </div>
+      </motion.div>
 
+      {toast.show && (
         <motion.div
-          className="mb-6 flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          className={`fixed top-4 right-4 px-4 py-2 rounded-lg text-white font-semibold ${toast.isError ? "bg-red-600" : "bg-green-600"}`}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.3 }}
         >
-          <div className="flex items-center gap-3">
-            <label className="text-lg font-medium text-purple-300">Filter by Type:</label>
-            <motion.select
-              value={mediaType}
-              onChange={(e) => setMediaType(e.target.value)}
-              className="px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 hover:bg-gray-700"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <option value="">All</option>
-              <option value="movie">Movie</option>
-              <option value="tv">TV</option>
-              <option value="animation">Animation</option>
-            </motion.select>
-              
-          </div>
+          {toast.message}
         </motion.div>
+      )}
 
-        {toast.show && (
-          <motion.div
-            className={`fixed top-4 right-4 px-4 py-2 rounded-lg text-white font-semibold ${toast.isError ? "bg-red-600" : "bg-green-600"}`}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {toast.message}
-          </motion.div>
-        )}
+      {error && (
+        <motion.p
+          className="text-red-600 dark:text-red-500 text-center mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {error}
+        </motion.p>
+      )}
 
-        {error && (
-          <motion.p
-            className="text-red-500 text-center mb-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {error}
-          </motion.p>
-        )}
-
-        {loading ? (
-          <motion.p
-            className="text-gray-400 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            Loading results...
-          </motion.p>
-        ) : results.length > 0 ? (
-          <motion.div
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
-            initial="hidden"
-            animate="show"
-            variants={{
-              hidden: {},
-              show: {
-                transition: {
-                  staggerChildren: 0.1,
-                },
+      {loading ? (
+        <motion.p
+          className="text-gray-600 dark:text-gray-400 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          Loading results...
+        </motion.p>
+      ) : results.length > 0 ? (
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: 0.1,
               },
-            }}
-          >
-            {results
-              .filter((item) => {
-                if (!mediaType) return true;
-                if (mediaType === "movie") return item.media_type === "movie";
-                if (mediaType === "tv") return item.media_type === "tv";
-                if (mediaType === "animation") return item.genre_ids?.includes(16);
-                return true;
-              })
-              .map((item) => {
-                const title = item.media_type === "movie" ? item.title : item.name;
-                const poster = item.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-                  : "https://image.tmdb.org/t/p/w300/poster.jpg?text=No+Image";
-                return (
-                  <motion.div
-                    key={`${item.media_type}_${item.id}`}
-                    variants={{
-                      hidden: { opacity: 0, scale: 0.9, y: 20 },
-                      show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4 } },
-                    }}
-                    whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-                  >
-                    <div className="bg-gradient-to-b from-gray-900 to-gray-800 p-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
-                      <img
-                        src={poster}
-                        alt={title}
-                        className="w-full h-60 object-cover rounded-lg"
-                      />
-                      <h2 className="text-base font-semibold mt-2 line-clamp-2 text-white">{title}</h2>
-                      <p className="text-sm text-yellow-400">⭐ {item.vote_average?.toFixed(1)}</p>
-                      <motion.button
-                        className="mt-2 w-full px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 text-white text-sm rounded-lg font-medium hover:from-green-500 hover:to-green-400 transition-all duration-300"
-                        onClick={() => addToRecommended(item)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        ➕ Add to UNCLE's PICK
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-          </motion.div>
-        ) : (
-          <motion.p
-            className="text-gray-400 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            No results yet. Try searching for a movie or TV show.
-          </motion.p>
-        )}
-      </div>
-
-      <style>
-        {`
-          .scrollbar-thin::-webkit-scrollbar {
-            height: 8px;
-            width: 8px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-thumb {
-            background-color: #6366f1;
-            border-radius: 4px;
-          }
-          .scrollbar-thin::-webkit-scrollbar-track {
-            background-color: #1f2937;
-          }
-
-          @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-          }
-          .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
-          .animate-zoomIn { animation: zoomIn 0.5s ease-out; }
-        `}
-      </style>
+            },
+          }}
+        >
+          {results
+            .filter((item) => {
+              if (!mediaType) return true;
+              if (mediaType === "movie") return item.media_type === "movie";
+              if (mediaType === "tv") return item.media_type === "tv";
+              if (mediaType === "animation") return item.genre_ids?.includes(16);
+              return true;
+            })
+            .map((item) => {
+              const title = item.media_type === "movie" ? item.title : item.name;
+              const poster = item.poster_path
+                ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                : "https://image.tmdb.org/t/p/w300/poster.jpg?text=No+Image";
+              return (
+                <motion.div
+                  key={`${item.media_type}_${item.id}`}
+                  variants={{
+                    hidden: { opacity: 0, scale: 0.9, y: 20 },
+                    show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4 } },
+                  }}
+                  whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+                >
+                  <div className="bg-white dark:bg-gradient-to-b dark:from-gray-900 dark:to-gray-800 p-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                    <img
+                      src={poster}
+                      alt={title}
+                      className="w-full h-60 object-cover rounded-lg"
+                    />
+                    <h2 className="text-base font-semibold mt-2 line-clamp-2 text-black dark:text-white">
+                      {title}
+                    </h2>
+                    <p className="text-sm text-yellow-500 dark:text-yellow-400">⭐ {item.vote_average?.toFixed(1)}</p>
+                    <motion.button
+                      className="mt-2 w-full px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 text-white text-sm rounded-lg font-medium hover:from-green-500 hover:to-green-400 transition-all duration-300"
+                      onClick={() => addToRecommended(item)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      ➕ Add to UNCLE's PICK
+                    </motion.button>
+                  </div>
+                </motion.div>
+              );
+            })}
+        </motion.div>
+      ) : (
+        <motion.p
+          className="text-gray-600 dark:text-gray-400 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          No results yet. Try searching for a movie or TV show.
+        </motion.p>
+      )}
     </div>
-  );
+
+    <style>
+      {`
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 8px;
+          width: 8px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background-color: #6366f1;
+          border-radius: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background-color: #1f2937;
+        }
+      `}
+    </style>
+  </div>
+);
+
 }

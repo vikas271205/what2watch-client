@@ -139,7 +139,7 @@ function TVDetail() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
+    <div className="min-h-screen bg-white text-black dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-800 dark:text-white transition-colors duration-300">
       {tv.backdrop_path && (
         <div
           className="fixed top-0 left-0 w-full h-full bg-cover bg-center filter blur-md opacity-30 -z-10"
@@ -170,7 +170,7 @@ function TVDetail() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600">
               {tv.name}
             </h1>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-gray-400">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-gray-500 dark:text-gray-400">
               <p className="text-sm sm:text-base font-semibold">
                 {tv.first_air_date?.slice(0, 4)} • {tv.episode_run_time?.[0] || "N/A"} mins
               </p>
@@ -186,20 +186,20 @@ function TVDetail() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 sm:gap-4 text-gray-300">
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-gray-600 dark:text-gray-300">
               <div className="flex items-center space-x-2">
                 <span className="font-semibold text-sm sm:text-base">TMDB:</span>
-                <span className="text-yellow-400 font-bold text-sm sm:text-base">
+                <span className="text-yellow-500 font-bold text-sm sm:text-base">
                   {tv.vote_average?.toFixed(1)}
                 </span>
-                <span className="text-gray-500 text-xs sm:text-sm">({tv.vote_count} votes)</span>
+                <span className="text-gray-400 text-xs sm:text-sm">({tv.vote_count} votes)</span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <motion.button
                 onClick={toggleWatchlist}
                 className={`px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold transition-colors ${
-                  isSaved ? "bg-green-600" : "bg-gray-700"
+                  isSaved ? "bg-green-600" : "bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
                 }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -211,7 +211,7 @@ function TVDetail() {
                 value={userRating}
                 onChange={(e) => handleRating(Number(e.target.value))}
                 disabled={!isSaved}
-                className="bg-gray-800 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base text-white cursor-pointer"
+                className="bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base text-black dark:text-white cursor-pointer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label="Rate TV show"
@@ -224,7 +224,7 @@ function TVDetail() {
                 ))}
               </motion.select>
               <motion.button
-                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-700 opacity-50 cursor-not-allowed"
+                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-300 dark:bg-gray-700 opacity-50 cursor-not-allowed text-black dark:text-white"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 disabled
@@ -233,7 +233,7 @@ function TVDetail() {
                 Available On
               </motion.button>
             </div>
-            <p className="text-sm sm:text-base leading-relaxed text-gray-300 max-w-2xl line-clamp-6">
+            <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300 max-w-2xl line-clamp-6">
               {tv.overview}
             </p>
           </div>
@@ -246,8 +246,8 @@ function TVDetail() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h3 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4">🎬 Watch Trailer</h3>
-            <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-700 aspect-video">
+            <h3 className="text-lg sm:text-xl md:text-2xl font-semibold mb-3 sm:mb-4 text-gray-700 dark:text-indigo-400">🎬 Watch Trailer</h3>
+            <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-300 dark:border-gray-700 aspect-video">
               <iframe
                 src={trailerUrl}
                 title="Trailer"
@@ -258,6 +258,7 @@ function TVDetail() {
           </motion.section>
         )}
 
+
         {cast.length > 0 && (
           <motion.section
             className="mt-8 sm:mt-10"
@@ -265,13 +266,13 @@ function TVDetail() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">👥 Cast</h2>
-            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-700 dark:text-indigo-400">👥 Cast</h2>
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-300 dark:scrollbar-track-gray-800">
               {cast.map((member) => (
                 <Link
                   key={member.id}
                   to={`/person/${member.id}`}
-                  className="flex-shrink-0 w-32 sm:w-40 rounded-lg overflow-hidden bg-gray-800 shadow-lg"
+                  className="flex-shrink-0 w-32 sm:w-40 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 shadow-lg"
                   aria-label={`View ${member.name} profile`}
                 >
                   <motion.div
@@ -289,7 +290,7 @@ function TVDetail() {
                       className="w-full h-40 sm:h-48 object-cover"
                       loading="lazy"
                     />
-                    <p className="text-center p-2 text-xs sm:text-sm font-medium text-gray-200 line-clamp-2">
+                    <p className="text-center p-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 line-clamp-2">
                       {member.name}
                     </p>
                   </motion.div>
@@ -299,6 +300,7 @@ function TVDetail() {
           </motion.section>
         )}
 
+
         {related.length > 0 && (
           <motion.section
             className="mt-8 sm:mt-10"
@@ -306,8 +308,8 @@ function TVDetail() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">📽️ Related Shows</h2>
-            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-800">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-700 dark:text-indigo-400">📽️ Related Shows</h2>
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-gray-300 dark:scrollbar-track-gray-800">
               {related.map((m) => (
                 <MovieCard
                   key={m.id}
@@ -324,25 +326,26 @@ function TVDetail() {
           </motion.section>
         )}
 
+
         <motion.section
           className="mt-8 sm:mt-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-indigo-400">💬 Comments</h2>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 text-gray-700 dark:text-indigo-400">💬 Comments</h2>
           {user && (
             <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6">
               <input
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Leave a comment..."
-                className="flex-1 px-3 sm:px-4 py-2 rounded-lg bg-gray-800 text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                className="flex-1 px-3 sm:px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-sm sm:text-base text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 aria-label="Comment input"
               />
               <motion.button
                 onClick={submitComment}
-                className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-sm sm:text-base font-medium"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-sm sm:text-base font-medium text-white"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label="Post comment"
@@ -356,19 +359,19 @@ function TVDetail() {
               {allComments.slice(0, showAllComments ? undefined : 3).map((c) => (
                 <motion.li
                   key={c.timestamp}
-                  className="bg-gray-800 p-3 sm:p-4 rounded-xl shadow-lg"
+                  className="bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-lg"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
                 >
-                  <p className="text-xs sm:text-sm text-gray-500 mb-1 font-semibold">{c.userEmail}</p>
-                  <p className="text-sm sm:text-base text-gray-300 whitespace-pre-line">{c.comment}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1 font-semibold">{c.userEmail}</p>
+                  <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 whitespace-pre-line">{c.comment}</p>
                 </motion.li>
               ))}
               {allComments.length > 3 && (
                 <motion.button
                   onClick={() => setShowAllComments(!showAllComments)}
-                  className="text-indigo-400 hover:underline text-sm sm:text-base"
+                  className="text-indigo-500 hover:underline text-sm sm:text-base"
                   whileHover={{ scale: 1.05 }}
                   aria-label={showAllComments ? "Show fewer comments" : "Show all comments"}
                 >
@@ -380,6 +383,7 @@ function TVDetail() {
             <p className="text-gray-500 text-sm sm:text-base italic">No comments yet.</p>
           )}
         </motion.section>
+
       </div>
 
       <style>

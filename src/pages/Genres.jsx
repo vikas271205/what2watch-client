@@ -76,9 +76,9 @@ function Genres() {
   }, [selectedGenre, genres, setIsLoading]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white px-4 sm:px-6 py-6">
+    <main className="min-h-screen">
       <motion.h1
-        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2 text-black dark:text-white"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -86,14 +86,17 @@ function Genres() {
         🎭 Browse by Genre
       </motion.h1>
 
-      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-gray-900/80 backdrop-blur-sm z-10 py-2">
+      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2">
         {genres.map((genre) => (
           <motion.button
             key={genre.id}
             onClick={() => setSelectedGenre(genre)}
             className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition ${
-              selectedGenre?.id === genre.id ? "bg-indigo-600" : "bg-gray-800 hover:bg-gray-700"
+              selectedGenre?.id === genre.id
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-200 text-black hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
             }`}
+
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label={`Select ${genre.name} genre`}
@@ -113,7 +116,8 @@ function Genres() {
             🎬 {selectedGenre.name} Movies
           </h2>
           {movies.length === 0 ? (
-            <p className="text-sm sm:text-base text-gray-400">No movies found.</p>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No movies found.</p>
+
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {movies.map((movie) => (
@@ -131,7 +135,7 @@ function Genres() {
           )}
         </motion.section>
       )}
-    </div>
+    </main>
   );
 }
 
