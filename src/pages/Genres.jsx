@@ -3,8 +3,13 @@ import MovieCard from "../components/MovieCard";
 import { useLoading } from "../context/LoadingContext";
 import API_BASE from "../utils/api";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 function Genres() {
+  const location = useLocation(); // ✅ move this to top level
+  const params = new URLSearchParams(location.search);
+  const genreFromUrl = params.get("genre"); // like "Action"
+
   const [genres, setGenres] = useState([]);
   const [selectedGenre, setSelectedGenre] = useState(null);
   const [movies, setMovies] = useState([]);
@@ -13,30 +18,39 @@ function Genres() {
   useEffect(() => {
     const fetchGenres = async () => {
       const cachedGenres = localStorage.getItem("tmdb_genres");
+      let data = [];
+
       if (cachedGenres) {
-        const data = JSON.parse(cachedGenres);
+        data = JSON.parse(cachedGenres);
         setGenres(data);
-        setSelectedGenre(data[0]);
-        return;
+      } else {
+        try {
+          setIsLoading(true);
+          const res = await fetch(`${API_BASE}/api/tmdb/genres`);
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          data = await res.json();
+          setGenres(data);
+          localStorage.setItem("tmdb_genres", JSON.stringify(data));
+        } catch (e) {
+          console.error("Failed to fetch genres", e);
+        } finally {
+          setIsLoading(false);
+        }
       }
 
-      try {
-        setIsLoading(true);
-        const res = await fetch(`${API_BASE}/api/tmdb/genres`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
-        setGenres(data);
+      // ✅ Set selected genre from URL
+      if (genreFromUrl) {
+        const found = data.find(
+          (g) => g.name.toLowerCase() === genreFromUrl.toLowerCase()
+        );
+        setSelectedGenre(found || data[0]);
+      } else {
         setSelectedGenre(data[0]);
-        localStorage.setItem("tmdb_genres", JSON.stringify(data));
-      } catch (e) {
-        console.error("Failed to fetch genres", e);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchGenres();
-  }, [setIsLoading]);
+  }, [genreFromUrl, setIsLoading]);
 
   useEffect(() => {
     const fetchMoviesByGenre = async () => {
@@ -96,7 +110,6 @@ function Genres() {
                 ? "bg-indigo-600 text-white"
                 : "bg-gray-200 text-black hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
             }`}
-
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label={`Select ${genre.name} genre`}
@@ -117,7 +130,6 @@ function Genres() {
           </h2>
           {movies.length === 0 ? (
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No movies found.</p>
-
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {movies.map((movie) => (
