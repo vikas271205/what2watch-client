@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import useDarkMode from "../utils/useDarkMode";
 import Navbar from "./Navbar";
-import { Outlet } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 
 export default function ThemeLayout() {
   const [darkMode] = useDarkMode();
@@ -9,7 +8,17 @@ export default function ThemeLayout() {
   return (
     <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
       <Navbar />
-      <Outlet />
+      <main className="pt-[4.5 rem] sm:pt-[5.3rem]">
+        <Outlet />
+      </main>
+
+      {/* Floating Assistant Button */}
+      <Link
+        to="/assistant"
+        className="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-700 transition z-50"
+      >
+        💬 Ask Assistant
+      </Link>
     </div>
   );
 }

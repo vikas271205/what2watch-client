@@ -48,7 +48,7 @@ function CastDetail() {
   );
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen pt-[5.5rem]">
             {/* Profile Header */}
       <motion.div
         className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start"

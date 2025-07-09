@@ -203,10 +203,26 @@ function TVDetail() {
 
   if (loading || !tv) return <ShimmerDetail />;
 
-  return (
-    <div className="relative min-h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-10 pt-16">
-        {/* TV Info */}
+return (
+<div className="relative z-10 bg-white/80 dark:bg-black/70 backdrop-blur-sm min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 pb-6">
+
+
+{tv?.backdrop_path && (
+  <div className="fixed inset-0 z-0">
+    <div
+      className="absolute inset-0 bg-cover bg-center"
+      style={{
+        backgroundImage: `url(https://image.tmdb.org/t/p/original${tv.backdrop_path})`,
+        filter: "brightness(0.85)",
+      }}
+    />
+    <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/70 to-white dark:from-black/80 dark:via-black/70 dark:to-black" />
+  </div>
+)}
+
+
+    <div className="relative z-10 bg-white/80 dark:bg-black/70 backdrop-blur-sm min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-6">
+       {/* TV Info */}
         <motion.div
           className="flex flex-col md:flex-row items-start gap-4 sm:gap-6 lg:gap-8"
           initial={{ opacity: 0, y: 20 }}

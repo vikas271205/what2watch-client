@@ -24,59 +24,84 @@ function Navbar() {
       .catch((err) => console.error("Logout Error:", err));
 
   return (
-    <nav className="bg-gradient-to-br from-gray-900 to-black text-white shadow-lg">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-lg">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-indigo-400 to-purple-600 bg-clip-text text-transparent">
+        <Link
+          to="/"
+          className="text-xl sm:text-2xl font-bold tracking-wide bg-gradient-to-r from-indigo-400 to-purple-600 bg-clip-text text-transparent"
+        >
           UncleFilmFinder
         </Link>
 
         {/* Mobile Controls */}
-        <div className="flex items-center gap-2 sm:gap-3 md:hidden">
-          <Link to="/search" aria-label="Search" className="hover:text-indigo-400 transition-colors duration-200">
-            <Search size={18} className="sm:w-6 sm:h-6" />
+        <div className="flex items-center gap-3 md:hidden">
+          <Link
+            to="/search"
+            aria-label="Search"
+            className="hover:text-indigo-500 transition-colors duration-200"
+          >
+            <Search size={22} />
           </Link>
           <button
             onClick={() => setDarkMode(!darkMode)}
             aria-label="Toggle Dark Mode"
-            className="hover:text-indigo-400 transition-colors duration-200"
+            className="hover:text-indigo-500 transition-colors duration-200"
           >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            {darkMode ? <Sun size={22} /> : <Moon size={22} />}
           </button>
           <button
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label="Toggle Menu"
-            className="hover:text-indigo-400 transition-colors duration-200"
+            className="hover:text-indigo-500 transition-colors duration-200"
           >
-            {menuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
         {/* Desktop Links */}
         <div className="hidden md:flex gap-4 sm:gap-6 items-center">
-          <Link to="/" className="hover:text-indigo-400">Home</Link>
-          <Link to="/trending" className="hover:text-indigo-400">Trending</Link>
-          <Link to="/search" className="hover:text-indigo-400">Search</Link>
-          <Link to="/genres" className="hover:text-indigo-400">Genres</Link>
-          <Link to="/watchlist" className="hover:text-indigo-400">Watchlist</Link>
-          <Link to="/tvshows" className="hover:text-indigo-400">TV Shows</Link>
-          <Link to="/unclespick" className="hover:text-indigo-400">Uncle's Pick</Link>
-          {isAdmin && <Link to="/admin/recommend" className="hover:text-yellow-400 font-semibold">Admin</Link>}
+          <Link to="/" className="hover:text-indigo-500">Home</Link>
+          <Link to="/trending" className="hover:text-indigo-500">Trending</Link>
+          <Link to="/search" className="hover:text-indigo-500">Search</Link>
+          <Link to="/genres" className="hover:text-indigo-500">Genres</Link>
+          <Link to="/watchlist" className="hover:text-indigo-500">Watchlist</Link>
+          <Link to="/tvshows" className="hover:text-indigo-500">TV Shows</Link>
+
+          <Link to="/unclespick" className="hover:text-indigo-400">
+            Uncle's Pick
+          </Link>
+
+
+          {isAdmin && (
+            <Link
+              to="/admin/recommend"
+              className="hover:text-yellow-400 font-semibold"
+            >
+              Admin
+            </Link>
+          )}
 
           <button
             onClick={() => setDarkMode(!darkMode)}
             aria-label="Toggle Dark Mode"
-            className="hover:text-indigo-400"
+            className="hover:text-indigo-500"
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
           {!user ? (
             <>
-              <Link to="/login" className="px-3 py-1 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 text-sm sm:text-base">
+              <Link
+                to="/login"
+                className="px-3 py-1 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 text-sm sm:text-base"
+              >
                 Login
               </Link>
-              <Link to="/signup" className="px-3 py-1 border border-white rounded-lg font-semibold hover:bg-gray-800 text-sm sm:text-base">
+              <Link
+                to="/signup"
+                className="px-3 py-1 border border-white rounded-lg font-semibold hover:bg-gray-800 text-sm sm:text-base"
+              >
                 Sign Up
               </Link>
             </>
@@ -100,29 +125,56 @@ function Navbar() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-gray-900 border-t border-gray-700 px-2 sm:px-4 py-2 flex flex-col gap-2">
+        <div className="md:hidden bg-gray-900 border-t border-gray-700 px-3 py-3 flex flex-col gap-2 text-sm">
           <Link to="/search" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Search</Link>
           <Link to="/trending" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Trending</Link>
           <Link to="/genres" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Genres</Link>
           <Link to="/watchlist" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Watchlist</Link>
           <Link to="/tvshows" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">TV Shows</Link>
-          <Link to="/unclespick" onClick={() => setMenuOpen(false)} className="hover:text-indigo-400">Uncle's Pick</Link>
-          {isAdmin && <Link to="/admin/recommend" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400 font-semibold">Admin</Link>}
+          <Link
+            to="/unclespick"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-indigo-400"
+          >
+            Uncle's Pick
+          </Link>
 
+
+          {isAdmin && (
+            <Link
+              to="/admin/recommend"
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-yellow-400 font-semibold"
+            >
+              Admin
+            </Link>
+          )}
           {!user ? (
             <>
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="bg-white text-black px-3 py-1 rounded-lg hover:bg-gray-200 text-sm sm:text-base">
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="bg-white text-black px-3 py-1 rounded-lg hover:bg-gray-200"
+              >
                 Login
               </Link>
-              <Link to="/signup" onClick={() => setMenuOpen(false)} className="border border-white px-3 py-1 rounded-lg hover:bg-gray-800 text-sm sm:text-base">
+              <Link
+                to="/signup"
+                onClick={() => setMenuOpen(false)}
+                className="border border-white px-3 py-1 rounded-lg hover:bg-gray-800"
+              >
                 Sign Up
               </Link>
             </>
           ) : (
             <>
-              <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-90">
-                <div className="w-7 sm:w-8 h-7 sm:h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm sm:text-base">
-                  <span>{user.email?.charAt(0).toUpperCase() || "U"}</span>
+              <Link
+                to="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="hover:opacity-90"
+              >
+                <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold">
+                  {user.email?.charAt(0).toUpperCase() || "U"}
                 </div>
               </Link>
               <button
@@ -130,7 +182,7 @@ function Navbar() {
                   setMenuOpen(false);
                   handleLogout();
                 }}
-                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg text-sm sm:text-base"
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg"
               >
                 Logout
               </button>

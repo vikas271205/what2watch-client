@@ -8,129 +8,135 @@ function HeroSection() {
   const navigate = useNavigate();
 
   useEffect(() => {
-const fetchHeroMovie = async () => {
-  try {
-    const res = await fetch(`${API_BASE}/api/recommend/all`);
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const data = await res.json();
+    const fetchHeroMovie = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/recommend/all`);
+        const data = await res.json();
 
-    // Filter movies with a poster (just for visual)
-    const validMovies = data.filter(
-      (item) =>
-        item.type === "movie" &&
-        typeof item.poster === "string" &&
-        item.poster.startsWith("http")
-    );
+        const validMovies = data.filter(
+          (item) =>
+            item.type === "movie" &&
+            typeof item.poster === "string" &&
+            item.poster.startsWith("http")
+        );
 
-    const pick = validMovies[0]; // or random
+        const randomMovie = validMovies[Math.floor(Math.random() * validMovies.length)];
+        if (!randomMovie) return;
 
-    if (!pick) {
-      setHeroMovie(null);
-      return;
-    }
+        const fullRes = await fetch(`${API_BASE}/api/tmdb/movie/${randomMovie.id}`);
+        const fullMovie = await fullRes.json();
 
-    // Fetch full movie data from TMDB using your backend
-    const fullRes = await fetch(`${API_BASE}/api/tmdb/movie/${pick.id}`);
-    if (!fullRes.ok) throw new Error(`Failed to get full TMDB data`);
-    const fullMovie = await fullRes.json();
-
-    setHeroMovie({
-      ...pick,
-      overview: fullMovie.overview,
-      backdrop_path: fullMovie.backdrop_path,
-    });
-  } catch (err) {
-    console.error("Hero movie fetch failed:", err);
-    setHeroMovie(null);
-  }
-};
-
+        setHeroMovie({
+          ...randomMovie,
+          overview: fullMovie.overview,
+          backdrop_path: fullMovie.backdrop_path,
+          genres: fullMovie.genres || [],
+        });
+      } catch (err) {
+        console.error("Hero movie fetch failed:", err);
+        setHeroMovie(null);
+      }
+    };
 
     fetchHeroMovie();
   }, []);
 
   const handleSearch = () => {
-    if (query.trim() !== "") {
+    if (query.trim()) {
       navigate(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 
+  const handleGenreClick = (genreName) => {
+    navigate(`/genres?name=${encodeURIComponent(genreName)}`);
+  };
+
   if (!heroMovie) {
     return (
-      <div className="relative h-[50vh] sm:h-[70vh] flex items-center justify-center bg-gray-900 font-inter">
-        <div className="relative z-10 text-center max-w-3xl space-y-4">
-          <div className="h-12 sm:h-16 w-3/4 mx-auto bg-gray-700/50 rounded-lg animate-pulseSlow"></div>
-          <div className="space-y-2">
-            <div className="h-4 sm:h-5 w-full mx-auto bg-gray-700/50 rounded animate-pulseSlow"></div>
-            <div className="h-4 sm:h-5 w-5/6 mx-auto bg-gray-700/50 rounded animate-pulseSlow"></div>
-          </div>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <div className="h-10 w-full max-w-md bg-gray-700/50 rounded-lg animate-pulseSlow"></div>
-            <div className="h-10 w-24 bg-gray-700/50 rounded-lg animate-pulseSlow"></div>
-          </div>
-        </div>
+      <div className="relative h-[60vh] flex items-center justify-center bg-gray-900 font-inter">
+        <div className="text-white text-base sm:text-lg animate-pulseSlow">Fetching Uncle's pick...</div>
       </div>
     );
   }
 
   return (
-    <div
-      className="relative h-[50vh] sm:h-[70vh] flex items-center justify-center text-center px-4 sm:px-10 font-inter"
-      style={{
-        backgroundImage: `url(${heroMovie.poster})`,
+<div className="relative font-inter">
+  <div
+    className="relative h-[60vh] flex items-center justify-center text-center px-4 bg-cover bg-center animate-zoomFade"
+    style={{
+      backgroundImage: `url(https://image.tmdb.org/t/p/original${heroMovie.backdrop_path})`,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      zIndex: 0,
+    }}
+  >
+    {/* Dark overlay */}
+    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
 
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundBlendMode: "overlay",
-      }}
-    >
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70 backdrop-blur-sm" />
+    {/* Tagline - mobile */}
+    <div className="absolute top-16 left-1/2 transform -translate-x-1/2 sm:hidden z-10">
+      <div className="inline-block text-[11px] font-semibold tracking-wide text-white bg-gradient-to-r from-orange-500 to-red-600 px-3 py-1.5 rounded-full shadow-md border border-white/30">
+        🔥 Handpicked by Uncle – Just for You!
+      </div>
+    </div>
 
-      <div className="relative z-10 text-white max-w-3xl">
-        {/* Subtitle */}
-        <p className="text-sm sm:text-base text-purple-300 uppercase tracking-wider mb-2 animate-fadeIn">
-          🎯 Uncle’s Favorite Pick
-        </p>
+    {/* Tagline - desktop */}
+    <div className="hidden sm:block absolute top-24 left-6 z-20">
+      <div className="text-base font-semibold tracking-wider text-white bg-gradient-to-r from-orange-500 to-red-600 px-6 py-3 rounded-full shadow-lg border border-white/40">
+        🔥 Handpicked by Uncle – Just for You!
+      </div>
+    </div>
 
-        {/* Title */}
-        <h1 className="text-3xl sm:text-5xl font-bold mb-4 animate-fadeIn">
-          {heroMovie.title}
-        </h1>
+    {/* Content */}
+    <div className="relative z-10 text-white w-full max-w-4xl space-y-4 sm:space-y-6 pt-20 sm:pt-12 animate-slideInUp">
+      <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-purple-500 drop-shadow-lg animate-fadeIn">
+        {heroMovie.title}
+      </h1>
 
-        {/* Overview fallback */}
-        <p className="text-sm sm:text-lg text-gray-200 mb-6 line-clamp-3 animate-slideUp">
-          {heroMovie.overview || "This is a must-watch handpicked by Uncle himself!"}
-        </p>
-
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 animate-zoomIn">
-<Link
-  to={`/movie/${heroMovie.id}`}
-  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-semibold transition-colors duration-200 shadow-lg hover:shadow-xl"
->
-  📖 More Details
-</Link>
-
-          <div className="flex w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Search movies or shows..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="px-4 py-2 w-full rounded-l-lg bg-white/90 text-black focus:outline-none focus:ring-2 focus:ring-purple-400"
-            />
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-r-lg text-white font-semibold transition-colors duration-200"
-            >
-              Search
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 px-2">
+        {heroMovie.genres.map((genre) => (
+          <button
+            key={genre.id}
+            onClick={() => handleGenreClick(genre.name)}
+            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 bg-white/10 border border-white/20 text-white hover:bg-white/20 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg"
+          >
+            {genre.name}
+          </button>
+        ))}
       </div>
 
+      <p className="text-xs sm:text-sm md:text-base text-gray-100 px-2 sm:px-4 line-clamp-3 max-w-2xl sm:max-w-3xl mx-auto">
+        {heroMovie.overview || "Uncle recommends this as a must-watch!"}
+      </p>
+
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 px-2">
+        <Link
+          to={`/movie/${heroMovie.id}`}
+          className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 rounded-full text-white font-semibold text-sm sm:text-base shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+        >
+          🎬 More Details
+        </Link>
+
+        <div className="flex w-full max-w-xs sm:max-w-md">
+          <input
+            type="text"
+            placeholder="Search movies or shows..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="px-3 sm:px-5 py-2 sm:py-3 w-full rounded-l-full bg-white/10 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400 border border-white/20"
+          />
+          <button
+            onClick={handleSearch}
+            className="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 rounded-r-full text-white font-semibold text-sm sm:text-base shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+          >
+            🔍
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
+</div>
+
   );
 }
 
