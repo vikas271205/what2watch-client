@@ -15,6 +15,7 @@ import { db, auth } from "../firebase";
 import API_BASE from "../utils/api";
 import MovieCard from "../components/MovieCard";
 import { motion } from "framer-motion";
+import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 
 function MovieDetail() {
   const { id } = useParams();
@@ -28,6 +29,8 @@ function MovieDetail() {
   const [allComments, setAllComments] = useState([]);
   const [showAllComments, setShowAllComments] = useState(false);
   const user = auth.currentUser;
+  const [watchmodeSources, setWatchmodeSources] = useState([]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,6 +41,22 @@ function MovieDetail() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const movieData = await res.json();
         setMovie(movieData);
+        setMovie(movieData);
+
+        const wmId = await getWatchmodeId(
+          movieData.title,
+          movieData.release_date?.slice(0, 4),
+          movieData.id.toString()
+        );
+
+        console.log("🎯 Watchmode ID:", wmId);
+
+        if (wmId) {
+          const sources = await getStreamingSources(wmId);
+          setWatchmodeSources(sources);
+          console.log("✅ Watchmode sources:", sources);
+        }
+        
 
         const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
         if (!trailerRes.ok) throw new Error(`HTTP error! status: ${trailerRes.status}`);
@@ -235,15 +254,27 @@ function MovieDetail() {
                   </option>
                 ))}
               </motion.select>
-              <motion.button
-                className="px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-semibold bg-gray-700 dark:bg-gray-800 opacity-50 cursor-not-allowed"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                disabled
-              >
-                Available On
-              </motion.button>
+
+
+
             </div>
+            {watchmodeSources.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <h4 className="w-full font-semibold text-sm sm:text-base text-gray-400 dark:text-gray-300">Available on:</h4>
+                {watchmodeSources.map((s) => (
+                  <a
+                    key={s.source_id}
+                    href={s.web_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 bg-red-600 rounded-full text-white text-xs sm:text-sm font-medium"
+                  >
+                    {s.name}
+                  </a>
+                ))}
+              </div>
+            )}
+
             <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300 max-w-2xl line-clamp-6">
               {movie.overview}
             </p>

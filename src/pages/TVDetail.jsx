@@ -15,6 +15,7 @@ import { db, auth } from "../firebase";
 import API_BASE from "../utils/api";
 import MovieCard from "../components/MovieCard";
 import { motion } from "framer-motion";
+import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 
 function TVDetail() {
   const { id } = useParams();
@@ -28,6 +29,8 @@ function TVDetail() {
   const [allComments, setAllComments] = useState([]);
   const [showAllComments, setShowAllComments] = useState(false);
   const user = auth.currentUser;
+  const [watchmodeSources, setWatchmodeSources] = useState([]);
+
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -36,7 +39,11 @@ function TVDetail() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setTV(data);
-
+        const wmId = await getWatchmodeId(tv.name, tv.first_air_date?.slice(0, 4));
+        if (wmId) {
+          const sources = await getStreamingSources(wmId);
+          setWatchmodeSources(sources);
+        }
         const trailerRes = await fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`);
         if (!trailerRes.ok) throw new Error(`HTTP error! status: ${trailerRes.status}`);
         const trailerData = await trailerRes.json();
