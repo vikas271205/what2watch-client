@@ -37,6 +37,7 @@ function TVDetail() {
   const [tvGenres, setTvGenres] = useState([]);
   const [loading, setLoading] = useState(true);
   const hasFetchedRef = useRef(false);
+  const [aiOverview, setAiOverview] = useState("");
 
   useEffect(() => {
     hasFetchedRef.current = false;
@@ -78,6 +79,30 @@ function TVDetail() {
         const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}`);
         const data = await res.json();
         setTV(data);
+        const genresText = data.genres?.map(g => g.name).join(", ");
+
+try {
+  const aiRes = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "tv",
+      title: data.name,
+      genre: genresText,
+      overview: data.overview,
+    }),
+  });
+
+  const aiData = await aiRes.json();
+if (aiData.rewritten) {
+  setAiOverview(aiData.rewritten);
+} else {
+  setAiOverview(data.overview);
+}
+
+} catch (err) {
+  console.error("AI Overview Rewrite Error:", err);
+}
 
         const [omdb, wmId] = await Promise.all([
           fetchOMDbData(data.name, data.first_air_date),
@@ -343,9 +368,11 @@ return (
               </p>
             )}
 
-            <p className="text-sm sm:text-base leading-relaxed text-gray-600 dark:text-gray-300 max-w-3xl">
-              {tv.overview}
-            </p>
+<div className="text-sm sm:text-base leading-relaxed max-w-3xl p-6 rounded-lg bg-black/70 border border-yellow-400/50 shadow-xl">
+  <p className="text-yellow-400 font-semibold drop-shadow-lg">
+    {aiOverview}
+  </p>
+</div>
           </div>
         </motion.div>
 

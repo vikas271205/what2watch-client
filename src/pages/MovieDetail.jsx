@@ -219,8 +219,7 @@ function MovieDetail() {
     );
 
   return (
-<div className="relative min-h-screen pt-[5.5rem] text-gray-900 dark:text-gray-100 transition-colors duration-300 z-0">
-
+    <div className="relative min-h-screen pt-[5.5rem] text-gray-900 dark:text-gray-100 transition-colors duration-300 z-0">
       {movie?.backdrop_path && (
         <div
           className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -351,9 +350,11 @@ function MovieDetail() {
                 </div>
               )}
 
-              <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300 max-w-2xl">
-                {rewrittenOverview || movie.overview}
-              </p>
+<div className="text-sm leading-relaxed max-w-2xl p-6 rounded-lg bg-black/70 border border-yellow-400/50 shadow-xl">
+  <p className="text-yellow-400 font-semibold drop-shadow-lg">
+    {rewrittenOverview || movie.overview}
+  </p>
+</div>
             </div>
           </motion.div>
 
@@ -391,31 +392,36 @@ function MovieDetail() {
                 <Users className="w-5 h-5" /> Cast
               </h2>
               <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
-                {cast.map((member) => (
+                {cast.map((member, index) => (
                   <Link
                     key={member.id}
                     to={`/person/${member.id}`}
-                    className="flex-shrink-0 w-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-md hover:shadow-lg transition"
+                    className="flex-shrink-0 w-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-md hover:shadow-[0_0_15px_rgba(0,255,255,0.5)] transition-all duration-300"
                     aria-label={`View ${member.name} profile`}
                   >
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
+                      initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
                     >
-                      <img
-                        src={
-                          member.profile_path
-                            ? `https://image.tmdb.org/t/p/w185${member.profile_path}`
-                            : "https://via.placeholder.com/185x278?text=No+Image"
-                        }
-                        alt={member.name}
-                        className="w-full h-40 object-cover"
-                        loading="lazy"
-                      />
-                      <p className="text-center p-2 text-xs font-medium text-gray-700 dark:text-gray-200 line-clamp-2">
-                        {member.name}
-                      </p>
+                      <div className="relative">
+                        <img
+                          src={
+                            member.profile_path
+                              ? `https://image.tmdb.org/t/p/w185${member.profile_path}`
+                              : "https://via.placeholder.com/185x278?text=No+Image"
+                          }
+                          alt={member.name}
+                          className="w-full h-40 object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 transition-opacity duration-300">
+                          <p className="text-center text-xs font-medium text-white line-clamp-2">
+                            {member.name}
+                          </p>
+                        </div>
+                      </div>
                     </motion.div>
                   </Link>
                 ))}
