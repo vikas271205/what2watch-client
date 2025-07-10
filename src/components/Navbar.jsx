@@ -24,8 +24,10 @@ function Navbar() {
       .catch((err) => console.error("Logout Error:", err));
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-lg">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between">
+    <nav className="relative w-full overflow-x-hidden bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-lg">
+
+      <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between overflow-x-hidden">
+
         {/* Logo */}
         <Link
           to="/"
@@ -191,6 +193,7 @@ function Navbar() {
         </div>
       )}
     </nav>
+    
   );
 }
 

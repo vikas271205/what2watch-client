@@ -4,6 +4,7 @@ import { auth } from "../firebase";
 import { getFirestore, doc, setDoc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import languageMap from "../utils/LanguageMap";
 import { calculateUncleScore } from "../utils/uncleScore";
+import API_BASE from "../utils/api";
 
 function MovieCard({
   id,
@@ -100,7 +101,8 @@ function MovieCard({
     const token = await user.getIdToken();
 
     const res = await fetch(
-      `${import.meta.env.VITE_API_BASE || ""}/api/recommend/${type}_${id}`,
+      `${API_BASE}/api/recommend/${type}_${id}`
+,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -147,7 +149,7 @@ function MovieCard({
             {user && (
               <button
                 onClick={toggleSave}
-                className={`absolute top-3 right-3 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold transition-all duration-200 transform hover:scale-110 shadow-md z-10 ${
+                className={`absolute top-3 right-3 rounded-full w-10 h-10 flex items-center justify-center text-lg font-bold transition-all duration-200 transform hover:scale-110 shadow-md ${
                   isSaved ? "bg-green-400 hover:bg-green-300 text-white" : "bg-gray-500 hover:bg-gray-400 text-white"
                 }`}
                 aria-label={isSaved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`}
@@ -164,7 +166,7 @@ function MovieCard({
                 🎯 {finalUncleScore}
               </div>
             )}
-            {location.pathname === "/recommended" && isAdmin && onDelete && (
+            {location.pathname === "/unclespick" && isAdmin && onDelete && (
               <button
                 onClick={handleAdminDelete}
                 className="absolute top-3 right-16 px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-md bg-black/70 hover:bg-black/90 text-red-400 hover:text-red-300"

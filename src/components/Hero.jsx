@@ -15,17 +15,18 @@ function HeroSection() {
         const res = await fetch(`${API_BASE}/api/recommend/all`);
         const data = await res.json();
 
-        const validMovies = data.filter(
-          (item) =>
-            item.type === "movie" &&
-            typeof item.poster === "string" &&
-            item.poster.startsWith("http")
-        );
+const validItems = data.filter(
+  (item) =>
+    typeof item.poster === "string" && item.poster.startsWith("http")
+);
 
-        const randomMovie = validMovies[Math.floor(Math.random() * validMovies.length)];
-        if (!randomMovie) return;
+const randomItem = validItems[Math.floor(Math.random() * validItems.length)];
+       if (!randomItem) return;
 
-        const fullRes = await fetch(`${API_BASE}/api/tmdb/movie/${randomMovie.id}`);
+        // ✅ Correct
+const fullRes = await fetch(`${API_BASE}/api/tmdb/${randomItem.type}/${randomItem.id}`);
+
+
         const fullMovie = await fullRes.json();
 
         // Fetch AI rewritten overview
@@ -56,7 +57,7 @@ function HeroSection() {
         }
 
         setHeroMovie({
-          ...randomMovie,
+          ...randomItem,
           overview: fullMovie.overview,
           backdrop_path: fullMovie.backdrop_path,
           genres: fullMovie.genres || [],
@@ -93,34 +94,32 @@ function HeroSection() {
   return (
     <div className="relative font-inter">
       <div
-        className="relative h-[60vh] flex items-center justify-center text-center px-4 bg-contain bg-top animate-zoomFade transition-all duration-500"
-        style={{
-          backgroundImage: `url(https://image.tmdb.org/t/p/original${heroMovie.backdrop_path})`,
-          zIndex: 0,
-        }}
+        className="relative h-[60vh] flex items-center justify-center text-center px-4 bg-cover bg-center before:absolute before:inset-0 before:bg-black/10 before:rounded-md"
+
+
+style={{
+  backgroundImage: `url(https://image.tmdb.org/t/p/original${heroMovie.backdrop_path})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
+  zIndex: 0,
+  filter: "brightness(0.75) saturate(1.2)",
+}}
+
+
+
       >
         {/* Dark overlay with increased opacity */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/90" />
+        <div className="absolute inset-0 bg-black/10 sm:bg-black/20 backdrop-blur-[1px] sm:backdrop-blur-[2px]" />
 
-        {/* Tagline - mobile, moved further down to avoid navbar */}
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 sm:hidden z-20">
-          <div className="inline-block text-[11px] font-semibold tracking-wide text-white bg-gradient-to-r from-pink-500 to-orange-500 px-3 py-1.5 rounded-full shadow-2xl border border-white/20 transition-transform hover:scale-110">
-            🔥 Uncle's Cinematic Gem – Just for You!
-          </div>
-        </div>
 
-        {/* Tagline - desktop */}
-        <div className="hidden sm:block absolute top-12 left-8 z-20">
-          <div className="text-lg font-bold tracking-wider text-white bg-gradient-to-r from-pink-500 to-orange-500 px-8 py-3 rounded-full shadow-2xl border border-white/30 transition-transform hover:scale-105">
-            🔥 Uncle's Cinematic Gem – Just for You!
-          </div>
-        </div>
+
 
         {/* Content */}
-        <div className="relative z-10 text-white w-full max-w-5xl space-y-5 sm:space-y-7 pt-24 sm:pt-16 animate-slideInUp">
-          <h1 className="text-2xl sm:text-5xl md:text-6xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-teal-200 via-cyan-300 to-pink-400 drop-shadow-2xl animate-pulseSlow">
-            {heroMovie.title}
-          </h1>
+        <div className="relative z-10 text-white w-full max-w-5xl space-y-5 sm:space-y-7 animate-slideInUp">
+<h1 className="text-3xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight text-shadow-sm drop-shadow-[0_2px_30px_rgba(255,255,255,0.35)] bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent animate-fadeInUp">
+  {heroMovie.title}
+</h1>
 
           <div className="flex flex-wrap justify-center gap-2 sm:gap-4 px-2">
             {heroMovie.genres.map((genre) => (
@@ -134,9 +133,21 @@ function HeroSection() {
             ))}
           </div>
 
-          <p className="text-sm sm:text-base md:text-lg text-gray-50 px-4 sm:px-6 line-clamp-3 max-w-2xl sm:max-w-3xl mx-auto font-medium drop-shadow-lg">
-            {aiOverview || "Uncle recommends this as a must-watch!"}
-          </p>
+<div className="text-center space-y-3 px-4">
+  <div className="inline-block relative">
+    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-yellow-400 to-purple-600 blur-md opacity-70 animate-pulse" />
+<p className="relative z-10 text-sm sm:text-base font-bold text-white uppercase tracking-wider px-5 py-2 rounded-full bg-black/70 backdrop-blur-md shadow-xl border border-white/20">
+  🎬 Uncle's Cinematic Gem – Just for You!
+</p>
+
+  </div>
+
+  <p className="text-sm sm:text-base md:text-lg text-white/90 px-4 sm:px-6 line-clamp-3 max-w-2xl sm:max-w-3xl mx-auto font-medium drop-shadow-lg">
+    {aiOverview || "Uncle recommends this as a must-watch!"}
+  </p>
+</div>
+
+
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 px-2">
             <Link
