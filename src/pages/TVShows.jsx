@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MovieCard from "../components/MovieCard";
+import ShimmerCard from "../components/ShimmerCard";
 import { useLoading } from "../context/LoadingContext";
 import API_BASE from "../utils/api";
 import { motion } from "framer-motion";
@@ -17,6 +18,10 @@ function TVShows() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const genreParam = queryParams.get("genre");
+
+  const [languageFilter, setLanguageFilter] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState("default");
+  const [yearFilter, setYearFilter] = useState("all");
 
   useEffect(() => {
     const fetchGenres = async () => {
@@ -43,13 +48,11 @@ function TVShows() {
         }
       }
 
-      // Match genre from URL
       if (genreParam) {
         const match = genresArray.find(
           (g) => g.name.toLowerCase() === genreParam.toLowerCase()
         );
-        if (match) setSelectedGenre(match);
-        else setSelectedGenre(genresArray[0]);
+        setSelectedGenre(match || genresArray[0]);
       } else {
         setSelectedGenre(genresArray[0]);
       }
@@ -58,55 +61,84 @@ function TVShows() {
     fetchGenres();
   }, [genreParam, setIsLoading]);
 
-  useEffect(() => {
-    const fetchShowsByGenre = async () => {
-      if (!selectedGenre || !hasMore) return;
+  const fetchShowsByGenre = async (reset = false) => {
+    if (!selectedGenre) return;
+    try {
+      setLocalLoading(true);
+      const pageToFetch = reset ? 1 : page;
 
-      try {
-        const isFirstPage = page === 1;
-        isFirstPage ? setIsLoading(true) : setLocalLoading(true);
-        const res = await fetch(
-          `${API_BASE}/api/tmdb/discover/tv?with_genres=${selectedGenre.id}&page=${page}`
-        );
-        const data = await res.json();
+      const queryParams = new URLSearchParams({
+        with_genres: selectedGenre.id,
+        page: pageToFetch,
+      });
+      if (languageFilter !== "all") queryParams.append("language", languageFilter);
+      if (yearFilter !== "all") queryParams.append("year", yearFilter);
 
-        const filteredShows = data.results.filter(
-          (show) => show.adult === false && show.poster_path
-        );
+      const res = await fetch(`${API_BASE}/api/tmdb/discover/tv?${queryParams}`);
+      const data = await res.json();
 
-        setShows((prev) => [
-          ...prev,
-          ...filteredShows.slice(0, 10).map((show) => ({
-            ...show,
-            tmdbRating: show.vote_average?.toString(),
-            language: show.original_language,
-            genres: show.genre_ids?.map(
-              (id) => genres.find((g) => g.id === id)?.name || ""
-            ),
-          })),
-        ]);
+      let filtered = data.results.filter(
+        (show) => show.adult === false && show.poster_path
+      );
 
-        if (filteredShows.length < 10) setHasMore(false);
-      } catch (e) {
-        console.error("Failed to fetch TV shows", e);
-        setShows([]);
-      } finally {
-        setIsLoading(false);
-        setLocalLoading(false);
+      if (selectedGenre.name.toLowerCase() === "animation") {
+        filtered = filtered.filter((s) => s.genre_ids.includes(16));
+      } else {
+        filtered = filtered.filter((s) => !s.genre_ids.includes(16));
       }
-    };
 
-    fetchShowsByGenre();
-  }, [selectedGenre, page, genres, hasMore, setIsLoading]);
+      const transformed = filtered.map((show) => ({
+        ...show,
+        tmdbRating: show.vote_average?.toString(),
+        language: show.original_language,
+        genres: show.genre_ids?.map(
+          (id) => genres.find((g) => g.id === id)?.name || ""
+        ),
+      }));
 
+      let finalList = [...transformed];
+
+      if (ratingFilter === "highest") {
+        finalList.sort((a, b) => b.vote_average - a.vote_average);
+      } else if (ratingFilter === "lowest") {
+        finalList.sort((a, b) => a.vote_average - b.vote_average);
+      }
+
+      if (reset) {
+        setShows(finalList);
+      } else {
+        setShows((prev) => [...prev, ...finalList]);
+      }
+
+      setHasMore(filtered.length >= 10);
+    } catch (e) {
+      console.error("Failed to fetch TV shows", e);
+      if (reset) setShows([]);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // 🔁 Fetch when filters or genre change
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [selectedGenre]);
+    if (selectedGenre) {
+      setPage(1);
+      setShows([]);
+      fetchShowsByGenre(true);
+    }
+  }, [selectedGenre, languageFilter, yearFilter, ratingFilter]);
+
+  // 🔁 Load more when page changes
+  useEffect(() => {
+    if (page > 1 && selectedGenre) {
+      fetchShowsByGenre(false);
+    }
+  }, [page]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-white to-gray-200 dark:from-gray-900 dark:via-black dark:to-gray-800 text-black dark:text-white px-4 sm:px-6 py-6">
       <motion.h1
-        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2"
+        className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 py-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -114,14 +146,52 @@ function TVShows() {
         📺 TV Shows
       </motion.h1>
 
-      <div className="flex flex-wrap gap-2 mb-6 sticky top-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 py-2">
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        {/* 🌐 Language Filter */}
+        <select
+          className="px-3 py-1 rounded border bg-white dark:bg-gray-800 dark:text-white"
+          value={languageFilter}
+          onChange={(e) => setLanguageFilter(e.target.value)}
+        >
+          <option value="all">All Languages</option>
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+          <option value="ko">Korean</option>
+          <option value="ja">Japanese</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+        </select>
+
+        {/* ⭐ Rating Filter */}
+        <select
+          className="px-3 py-1 rounded border bg-white dark:bg-gray-800 dark:text-white"
+          value={ratingFilter}
+          onChange={(e) => setRatingFilter(e.target.value)}
+        >
+          <option value="default">Default</option>
+          <option value="highest">Highest Rated</option>
+          <option value="lowest">Lowest Rated</option>
+        </select>
+
+        {/* 📅 Year Filter */}
+        <select
+          className="px-3 py-1 rounded border bg-white dark:bg-gray-800 dark:text-white"
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+        >
+          <option value="all">All Years</option>
+          {Array.from({ length: 12 }, (_, i) => 2024 - i).map((year) => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6 py-2">
         {genres.map((genre) => (
           <motion.button
             key={genre.id}
             onClick={() => {
               setSelectedGenre(genre);
-              setShows([]);
-              setPage(1);
               setHasMore(true);
             }}
             className={`px-3 sm:px-4 py-1 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition ${
@@ -148,8 +218,14 @@ function TVShows() {
             🎬 {selectedGenre.name} Shows
           </h2>
 
-          {shows.length === 0 && !localLoading ? (
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No shows found.</p>
+          {localLoading && shows.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+              {Array(10).fill(0).map((_, i) => <ShimmerCard key={i} />)}
+            </div>
+          ) : shows.length === 0 ? (
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              No shows found.
+            </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {shows.map((show) => (
@@ -160,7 +236,7 @@ function TVShows() {
                   imageUrl={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
                   tmdbRating={show.tmdbRating}
                   genres={show.genres}
-                  language={show.original_language}
+                  language={show.language}
                   isTV={true}
                 />
               ))}
@@ -170,33 +246,25 @@ function TVShows() {
       )}
 
       {hasMore && !localLoading && (
-        <motion.div
-          className="text-center mt-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.button
+        <div className="text-center mt-6">
+          <button
             onClick={() => setPage((prev) => prev + 1)}
-            className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg bg-indigo-600 text-white text-sm sm:text-base font-semibold"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="Load more shows"
+            className="px-5 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg"
           >
             Load More
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
       )}
 
-      {localLoading && (
-        <p className="text-gray-600 dark:text-gray-400 text-center mt-6 text-sm sm:text-base">
+      {localLoading && shows.length > 0 && (
+        <div className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400">
           Loading more...
-        </p>
+        </div>
       )}
 
       {!hasMore && !localLoading && (
-        <p className="text-gray-700 dark:text-gray-500 text-center mt-6 text-sm sm:text-base">
-          You have reached the end.
+        <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
+          You’ve reached the end.
         </p>
       )}
     </div>
