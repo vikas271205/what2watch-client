@@ -108,9 +108,18 @@ function MovieDetail() {
         );
 
         if (wmId) {
-          const sources = await getStreamingSources(wmId);
-          setWatchmodeSources(sources);
+          const allSources = await getStreamingSources(wmId);
+
+          // Prioritize Indian sources if present
+          const indianSources = allSources.filter((s) => s.region === "IN");
+
+          if (indianSources.length > 0) {
+            setWatchmodeSources(indianSources);
+          } else {
+            setWatchmodeSources(allSources);
+          }
         }
+
 
         const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
         const trailerData = await trailerRes.json();
