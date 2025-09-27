@@ -8,7 +8,7 @@ export default function ThemeLayout() {
   return (
     <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
       <Navbar />
-      <main className="pt-6 sm:pt-8">
+      <main >
         <Outlet />
       </main>
 
