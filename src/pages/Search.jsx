@@ -217,7 +217,7 @@ function Search() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        🔍 Search Movies & TV Shows
+        🔍 Search Movie & TV Show
       </motion.h2>
 
       <div className="relative mb-6 sm:mb-8 z-20">
