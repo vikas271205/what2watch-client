@@ -20,6 +20,7 @@ function MovieCard({
   tmdbRating,
   imdbRating,
   rtRating,
+  uncleScore, // 1. Accept the pre-calculated score as a prop
   isSaved: initialIsSaved,
   year,
   isAdmin = false,
@@ -33,7 +34,11 @@ function MovieCard({
   const cardRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
-  const finalUncleScore = calculateUncleScore(tmdbRating, imdbRating, rtRating);
+
+  // 2. If a pre-calculated score is passed, use it. Otherwise, calculate it as a fallback.
+  const finalUncleScore = (uncleScore != null) 
+    ? uncleScore 
+    : calculateUncleScore(tmdbRating, imdbRating, rtRating);
 
   const width = size === "large" ? "w-48 sm:w-56 lg:w-64" : "w-40 sm:w-48 lg:w-52";
 
@@ -188,13 +193,12 @@ function MovieCard({
             {genres.length > 0 && (
               <div className="flex gap-1.5 flex-wrap">
                 {genres.slice(0, 2).map((genre, i) => (
-  genre && (
-    <span key={`${genre}-${i}`} className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200">
-      {genre}
-    </span>
-  )
-))}
-
+                  genre && (
+                    <span key={`${genre}-${i}`} className="text-xs bg-purple-600/40 rounded-full px-2 py-1 text-gray-200">
+                      {genre}
+                    </span>
+                  )
+                ))}
               </div>
             )}
 
