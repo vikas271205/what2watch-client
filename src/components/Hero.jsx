@@ -1,69 +1,30 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import API_BASE from "../utils/api";
-import ShimmerCard from "./ShimmerCard";
+import { auth, db } from "../firebase";
+import { doc, setDoc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { Plus, Check } from "lucide-react";
+import { motion } from "framer-motion";
 
-function HeroSection() {
+function Hero() {
   const [heroMovie, setHeroMovie] = useState(null);
-  const [query, setQuery] = useState("");
-  const [aiOverview, setAiOverview] = useState("");
-  const navigate = useNavigate();
+  const [isSaved, setIsSaved] = useState(false);
+  const user = auth.currentUser;
 
   useEffect(() => {
     const fetchHeroMovie = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/recommend/all`);
-        const data = await res.json();
+        const recommendRes = await fetch(`${API_BASE}/api/recommend/all`);
+        const recommendData = await recommendRes.json();
+        const validItems = recommendData.filter(item => typeof item.poster === "string");
+        if (validItems.length === 0) return;
+        const randomItem = validItems[Math.floor(Math.random() * validItems.length)];
 
-const validItems = data.filter(
-  (item) =>
-    typeof item.poster === "string" && item.poster.startsWith("http")
-);
+        const fullRes = await fetch(`${API_BASE}/api/tmdb/${randomItem.type}/${randomItem.id}`);
+        const fullMovieData = await fullRes.json();
+        
+        setHeroMovie(fullMovieData);
 
-const randomItem = validItems[Math.floor(Math.random() * validItems.length)];
-       if (!randomItem) return;
-
-        // ✅ Correct
-const fullRes = await fetch(`${API_BASE}/api/tmdb/${randomItem.type}/${randomItem.id}`);
-
-
-        const fullMovie = await fullRes.json();
-
-        // Fetch AI rewritten overview
-        let rewritten = "";
-        try {
-          const aiRes = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: fullMovie.title,
-              overview: fullMovie.overview,
-              genre: fullMovie.genres?.[0]?.name || "Movie",
-              type: "movie",
-              year: fullMovie.release_date?.slice(0, 4),
-            }),
-          });
-
-          const aiData = await aiRes.json();
-          if (aiData?.rewritten) {
-            rewritten = aiData.rewritten;
-          } else {
-            console.warn("Fallback to original overview");
-            rewritten = fullMovie.overview;
-          }
-        } catch (err) {
-          console.warn("AI overview error:", err.message);
-          rewritten = fullMovie.overview;
-        }
-
-        setHeroMovie({
-          ...randomItem,
-          overview: fullMovie.overview,
-          backdrop_path: fullMovie.backdrop_path,
-          genres: fullMovie.genres || [],
-        });
-
-        setAiOverview(rewritten);
       } catch (err) {
         console.error("Hero movie fetch failed:", err);
         setHeroMovie(null);
@@ -73,111 +34,112 @@ const fullRes = await fetch(`${API_BASE}/api/tmdb/${randomItem.type}/${randomIte
     fetchHeroMovie();
   }, []);
 
-  const handleSearch = () => {
-    if (query.trim()) {
-      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-    }
-  };
+  useEffect(() => {
+    if (!user || !heroMovie) return;
+    const checkWatchlist = async () => {
+      const docId = `movie_${heroMovie.id}`;
+      const watchRef = doc(db, "watchlists", `${user.uid}_${docId}`);
+      const watchSnap = await getDoc(watchRef);
+      setIsSaved(watchSnap.exists());
+    };
+    checkWatchlist();
+  }, [user, heroMovie]);
 
-  const handleGenreClick = (genreName) => {
-    navigate(`/genres?name=${encodeURIComponent(genreName)}`);
+  const toggleSave = async () => {
+    if (!user || !heroMovie) return;
+    const docId = `movie_${heroMovie.id}`;
+    const ref = doc(db, "watchlists", `${user.uid}_${docId}`);
+    try {
+      if (isSaved) {
+        await deleteDoc(ref);
+        setIsSaved(false);
+      } else {
+        await setDoc(ref, {
+          userId: user.uid,
+          movieId: heroMovie.id,
+          title: heroMovie.title,
+          imageUrl: `https://image.tmdb.org/t/p/w300${heroMovie.poster_path}`,
+          timestamp: serverTimestamp(),
+        });
+        setIsSaved(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle watchlist:", err);
+    }
   };
 
   if (!heroMovie) {
     return (
-      <div className="relative h-[60vh] flex items-center justify-center bg-gradient-to-br from-gray-900 to-indigo-900 font-inter">
-        <ShimmerCard type="text-block" className="w-full max-w-4xl" />
+      <div className="h-[70vh] flex items-center justify-center bg-gray-900">
+        <div className="w-full max-w-4xl px-8 space-y-4">
+            <div className="h-16 bg-gray-800 rounded-lg w-3/4 animate-pulse"></div>
+            <div className="h-6 bg-gray-800 rounded-lg w-full animate-pulse"></div>
+            <div className="h-6 bg-gray-800 rounded-lg w-2/3 animate-pulse"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative font-inter">
+    <div className="relative h-[70vh] font-inter text-white">
       <div
-        className="relative h-[60vh] flex items-center justify-center text-center px-4 bg-cover bg-center before:absolute before:inset-0 before:bg-black/10 before:rounded-md"
+        className="absolute inset-0 bg-cover bg-top"
+        style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${heroMovie.backdrop_path})` }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
 
+      <div className="relative z-10 flex h-full items-end p-6 sm:p-8 md:p-12">
+        <div className="w-full max-w-3xl text-left space-y-4">
+          
+          {/* --- This is the new "Frosted Glass" Badge --- */}
+          <motion.div
+            className="inline-block bg-white/10 text-indigo-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full backdrop-blur-sm ring-1 ring-inset ring-white/20"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            Uncle's Pick
+          </motion.div>
 
-style={{
-  backgroundImage: `url(https://image.tmdb.org/t/p/original${heroMovie.backdrop_path})`,
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-  zIndex: 0,
-  filter: "brightness(0.75) saturate(1.2)",
-}}
-
-
-
-      >
-        {/* Dark overlay with increased opacity */}
-        <div className="absolute inset-0 bg-black/10 sm:bg-black/20 backdrop-blur-[1px] sm:backdrop-blur-[2px]" />
-
-
-
-
-        {/* Content */}
-        <div className="relative z-10 text-white w-full max-w-5xl space-y-5 sm:space-y-7 animate-slideInUp">
-<h1 className="text-3xl sm:text-6xl md:text-7xl font-extrabold text-white tracking-tight text-shadow-sm drop-shadow-[0_2px_30px_rgba(255,255,255,0.35)] bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent animate-fadeInUp">
-  {heroMovie.title}
-</h1>
-
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 px-2">
-            {heroMovie.genres.map((genre) => (
-              <button
-                key={genre.id}
-                onClick={() => handleGenreClick(genre.name)}
-                className="text-xs sm:text-sm px-4 sm:px-5 py-2 bg-gradient-to-r from-purple-500/80 to-indigo-500/80 border border-white/30 text-white rounded-full transition-all duration-300 hover:from-purple-400 hover:to-indigo-400 hover:scale-110 hover:shadow-2xl"
-              >
-                {genre.name}
-              </button>
-            ))}
-          </div>
-
-<div className="text-center space-y-3 px-4">
-  <div className="inline-block relative">
-    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-yellow-400 to-purple-600 blur-md opacity-70 animate-pulse" />
-<p className="relative z-10 text-sm sm:text-base font-bold text-white uppercase tracking-wider px-5 py-2 rounded-full bg-black/70 backdrop-blur-md shadow-xl border border-white/20">
-  🎬 Uncle's Cinematic Gem – Just for You!
-</p>
-
-  </div>
-
-  <p className="text-sm sm:text-base md:text-lg text-white/90 px-4 sm:px-6 line-clamp-3 max-w-2xl sm:max-w-3xl mx-auto font-medium drop-shadow-lg">
-    {aiOverview || "Uncle recommends this as a must-watch!"}
-  </p>
-</div>
-
-
-
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 px-2">
+          <motion.h1 
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight drop-shadow-xl"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          >
+            {heroMovie.title || heroMovie.name}
+          </motion.h1>
+          
+          <motion.p 
+            className="text-gray-200 text-base sm:text-lg line-clamp-3 drop-shadow-lg"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            {heroMovie.overview}
+          </motion.p>
+          
+          <motion.div 
+            className="flex flex-wrap items-center gap-4 pt-2"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
+          >
             <Link
               to={`/movie/${heroMovie.id}`}
-              className="px-5 sm:px-8 py-3 bg-gradient-to-r from-teal-300 to-cyan-400 hover:from-teal-400 hover:to-cyan-500 rounded-full text-white font-bold text-sm sm:text-lg shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-[0_0_25px_rgba(0,255,255,0.6)]"
+              className="px-6 py-3 bg-white text-black rounded-lg font-bold text-base shadow-lg transition-transform hover:scale-105"
             >
-              🎬 More Details
+              More Details
             </Link>
-
-            <div className="flex w-full max-w-xs sm:max-w-md">
-              <input
-                type="text"
-                placeholder="Search movies or shows..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="px-4 sm:px-6 py-3 w-full rounded-l-full bg-white/10 text-white placeholder-gray-200 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-300 border border-white/30 transition-all duration-300"
-              />
-              <button
-                onClick={handleSearch}
-                className="px-4 sm:px-6 py-3 bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 rounded-r-full text-white font-bold text-sm sm:text-base shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-[0_0_25px_rgba(255,105,180,0.6)]"
-              >
-                🔍
-              </button>
-            </div>
-          </div>
+            
+            <button
+              onClick={toggleSave}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-base shadow-lg transition-transform hover:scale-105 ${
+                isSaved 
+                ? "bg-green-600/80 backdrop-blur-sm" 
+                : "bg-white/20 backdrop-blur-sm ring-1 ring-white/20"
+              }`}
+            >
+              {isSaved ? <Check size={20} /> : <Plus size={20} />}
+              {isSaved ? "On Watchlist" : "Add to Watchlist"}
+            </button>
+          </motion.div>
         </div>
       </div>
     </div>
   );
 }
 
-export default HeroSection;
+export default Hero;
