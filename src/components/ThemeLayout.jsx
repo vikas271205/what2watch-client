@@ -6,7 +6,8 @@ export default function ThemeLayout() {
   const [darkMode] = useDarkMode();
 
   return (
-    <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
+    // AFTER
+    <div className="min-h-screen transition-colors duration-300">
       <Navbar />
       <main >
         <Outlet />
