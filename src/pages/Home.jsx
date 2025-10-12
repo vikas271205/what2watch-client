@@ -19,7 +19,6 @@ function Home() {
         </div>
       </div>
 
-      <Footer />
     </main>
   );
 }
