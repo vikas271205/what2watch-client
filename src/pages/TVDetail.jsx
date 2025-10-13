@@ -1,566 +1,420 @@
-import { useEffect, useState, useRef } from "react";
+// src/pages/TVDetail.jsx
+
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import {
-  getDoc,
-  doc,
-  setDoc,
-  deleteDoc,
-  collection,
-  getDocs,
-  query,
-  where,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { useColor } from "color-thief-react";
+import { auth, db } from "../firebase";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import API_BASE from "../utils/api";
 import MovieCard from "../components/MovieCard";
-import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
-import { fetchOMDbData } from "../api/omdb";
 import ShimmerDetail from "../components/ShimmerDetail";
-import { motion } from "framer-motion";
-import { Star, Bookmark, PlayCircle, Users, MessageCircle } from "lucide-react";
+import RatingCircle from "../components/RatingCircle";
+import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
+import { motion, AnimatePresence } from "framer-motion";
+import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark } from "lucide-react";
+
+const formatRuntime = (mins) => {
+    if (!mins || typeof mins !== 'number' || mins <= 0) return null;
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    let result = '';
+    if (hours > 0) result += `${hours}h`;
+    if (remainingMins > 0) result += ` ${remainingMins}m`;
+    return result.trim();
+};
+
+const InteractiveStarRating = ({ totalStars = 10, currentRating = 0, onRate, disabled }) => {
+    const [hoverRating, setHoverRating] = useState(0);
+    return (
+        <div className={`flex items-center gap-1 ${disabled ? 'cursor-not-allowed' : ''}`}>
+            {[...Array(totalStars)].map((_, index) => {
+                const starValue = index + 1;
+                return (<Star key={starValue} className={`transition-colors duration-150 ${disabled ? '' : 'cursor-pointer'} ${starValue <= (hoverRating || currentRating) ? "text-yellow-400 fill-current" : "text-gray-600"}`} size={24} onClick={() => !disabled && onRate(starValue)} onMouseEnter={() => !disabled && setHoverRating(starValue)} onMouseLeave={() => !disabled && setHoverRating(0)}/>);
+            })}
+        </div>
+    );
+};
+
+const TabButton = ({ active, onClick, children }) => (<button onClick={onClick} className={`px-4 py-2 text-sm sm:text-base font-semibold rounded-full transition-colors duration-300 relative ${active ? "text-white" : "text-gray-400 hover:text-white"}`}>{children}{active && (<motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--dominant-color)]" layoutId="underline"/>)}</button>);
+
+const indianSources = [203, 157, 26, 372, 387, 371, 122]; // Netflix, Hulu, Prime, Disney+, HBO, Apple TV+, Hotstar
+
+const sourceDetails = {
+  203: { name: 'Netflix', color: '#E50914' },
+  157: { name: 'Hulu', color: '#1CE783' },
+  26: { name: 'Prime Video', color: '#00A8E1' },
+  372: { name: 'Disney+', color: '#113CCF' },
+  387: { name: 'HBO Max', color: '#5C4AE1' },
+  371: { name: 'Apple TV+', color: '#A2AAAD' },
+  122: { name: 'Hotstar', color: '#0071CE' }
+};
+
+const WatchOnSection = ({ sources }) => {
+  const filteredSources = sources
+    .filter(s => indianSources.includes(s.source_id))
+    .filter((source, index, self) => index === self.findIndex(s => s.source_id === source.source_id)); // remove duplicates
+
+  if (filteredSources.length === 0) {
+    return (
+      <div className="mb-8 p-6 rounded-2xl bg-gray-800">
+        <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <PlayCircle className="w-6 h-6 text-[var(--dominant-color)]" /> Stream Now On
+        </h3>
+        <p className="text-gray-400">Not available for streaming in India.</p>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div className="mb-8 p-6 rounded-2xl bg-gray-800">
+      <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+        <PlayCircle className="w-6 h-6 text-[var(--dominant-color)]" /> Stream Now On
+      </h3>
+      <div className="flex flex-wrap gap-4">
+        {filteredSources.map(source => {
+          const details = sourceDetails[source.source_id];
+          if (!details) return null;
+
+          return (
+            <a
+              key={source.source_id}
+              href={source.web_url || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-gray-900/50 hover:bg-gray-700 transition-all duration-300 p-2 pr-4 rounded-lg transform hover:scale-105"
+              style={{ borderLeft: `4px solid ${details.color}` }}
+              title={`Watch on ${details.name}`}
+            >
+              <span className="font-semibold text-sm text-white">{details.name}</span>
+            </a>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+};
+
+
+const ReviewCard = ({ review, isAdmin, onDelete }) => {
+    const formattedDate = review.createdAt?.seconds ? new Date(review.createdAt.seconds * 1000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now';
+    return ( <div className="bg-gray-800 p-4 rounded-lg relative group"> <div className="flex items-start mb-2"> <img src={review.userAvatar || `https://placehold.co/40x40/2d3748/FFFFFF?text=${review.userName.charAt(0)}`} alt={review.userName} className="w-10 h-10 rounded-full mr-3"/> <div className="flex-1"> <div className="flex items-center justify-between"> <p className="font-semibold">{review.userName}</p> <p className="text-xs text-gray-400">{formattedDate}</p> </div> {review.rating && <div className="flex items-center">{[...Array(10)].map((_, i) => (<Star key={i} size={14} className={i < review.rating ? "text-yellow-400 fill-current" : "text-gray-600"}/>))}</div>} </div> </div> <p className="text-gray-300 text-sm leading-relaxed pr-8 whitespace-pre-line">{review.comment}</p> {isAdmin && ( <button onClick={() => onDelete(review.id)} className="absolute top-2 right-2 p-1.5 bg-red-800/50 text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-800 hover:text-white" title="Delete Comment"> <Trash2 size={16} /> </button> )} </div> );
+};
+
+const EpisodeCard = ({ episode }) => {
+    return (
+        <div className="bg-gray-800 rounded-lg overflow-hidden flex flex-col sm:flex-row gap-4">
+            <img 
+                src={episode.still_path ? `https://image.tmdb.org/t/p/w300${episode.still_path}` : "https://placehold.co/300x169/1f2937/FFFFFF?text=No+Image"} 
+                alt={episode.name}
+                className="w-full sm:w-48 h-auto object-cover flex-shrink-0 bg-gray-700"
+            />
+            <div className="p-4">
+                <h4 className="font-bold text-white">{episode.episode_number}. {episode.name}</h4>
+                <p className="text-xs text-gray-400 mt-1 mb-2">{new Date(episode.air_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="text-sm text-gray-300 line-clamp-3">{episode.overview}</p>
+            </div>
+        </div>
+    );
+};
+
+const SeasonsTab = ({ tvShow, selectedSeason, onSeasonChange, seasonDetails, isLoading }) => {
+    const seasons = (tvShow?.seasons || []).filter(s => s.season_number > 0);
+    return (
+        <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-2"><Tv className="w-6 h-6"/> Seasons</h3>
+                <select 
+                    value={selectedSeason} 
+                    onChange={e => onSeasonChange(Number(e.target.value))}
+                    className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+                >
+                    {seasons.map(season => <option key={season.id} value={season.season_number}>{season.name}</option>)}
+                </select>
+            </div>
+            {isLoading ? (
+                <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => <div key={i} className="bg-gray-800 h-32 rounded-lg animate-pulse"></div>)}
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {seasonDetails?.episodes?.map(episode => <EpisodeCard key={episode.id} episode={episode} />)}
+                </div>
+            )}
+        </div>
+    );
+};
 
 function TVDetail() {
-  const { id } = useParams();
-  const [tv, setTV] = useState(null);
-  const [trailerUrl, setTrailerUrl] = useState("");
-  const [cast, setCast] = useState([]);
-  const [related, setRelated] = useState([]);
-  const [isSaved, setIsSaved] = useState(false);
-  const [userRating, setUserRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [allComments, setAllComments] = useState([]);
-  const [showAllComments, setShowAllComments] = useState(false);
-  const [watchmodeSources, setWatchmodeSources] = useState([]);
-  const user = auth.currentUser;
-  const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
-  const [tvGenres, setTvGenres] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const hasFetchedRef = useRef(false);
-  const [aiOverview, setAiOverview] = useState("");
+    const { id } = useParams();
+    const [tvShow, setTvShow] = useState(null);
+    const [theHook, setTheHook] = useState("");
+    const [trailerKey, setTrailerKey] = useState(null);
+    const [cast, setCast] = useState([]);
+    const [related, setRelated] = useState([]);
+    const [streamingSources, setStreamingSources] = useState([]);
+    const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
+    const [userRating, setUserRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [reviews, setReviews] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState("synopsis");
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [currentUser, setCurrentUser] = useState(auth.currentUser);
+    const [selectedSeason, setSelectedSeason] = useState(1);
+    const [seasonDetails, setSeasonDetails] = useState(null);
+    const [isSeasonLoading, setIsSeasonLoading] = useState(false);
+    const [isInWatchlist, setIsInWatchlist] = useState(false);
 
-  useEffect(() => {
-    hasFetchedRef.current = false;
-    window.scrollTo(0, 0);
+    const posterUrl = tvShow?.poster_path ? `https://image.tmdb.org/t/p/w200${tvShow.poster_path}` : null;
+    const { data: dominantColor } = useColor(posterUrl, 'hex', { crossOrigin: 'anonymous', quality: 10 });
 
-    setTV(null);
-    setTrailerUrl("");
-    setCast([]);
-    setRelated([]);
-    setIsSaved(false);
-    setUserRating(0);
-    setComment("");
-    setAllComments([]);
-    setWatchmodeSources([]);
-    setOmdbRatings({ imdb: null, rt: null });
-    setLoading(true);
+    useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user); // updates state when user signs in/out
+      console.log("Signed in:", user?.uid, user?.email);
+    });
 
-    const fetchGenres = async () => {
-      const cached = localStorage.getItem("tmdb_tv_genres");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setTvGenres(parsed.genres || parsed);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/tmdb/genre/tv`);
-        const data = await res.json();
-        const genresArray = data.genres || data;
-        localStorage.setItem("tmdb_tv_genres", JSON.stringify(genresArray));
-        setTvGenres(genresArray);
-      } catch (err) {
-        console.error("Failed to fetch TV genres", err);
-        setTvGenres([]);
-      }
+    return () => unsubscribe(); // cleanup listener
+  }, []);
+
+    useEffect(() => {
+        setTvShow(null);
+        window.scrollTo(0, 0);
+
+        const fetchAll = async () => {
+            try {
+                const [tvRes, reviewsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/tmdb/tv/${id}`),
+                    fetch(`${API_BASE}/api/reviews/tv/${id}`)
+                ]);
+                
+                const tvData = await tvRes.json();
+                setTvShow(tvData);
+
+                if (reviewsRes.ok) {
+                    const reviewsData = await reviewsRes.json();
+                    if (Array.isArray(reviewsData)) { setReviews(reviewsData); }
+                }
+
+                const [aiData, omdbData, trailerData, castData, similarData] = await Promise.all([
+                    fetch(`${API_BASE}/api/ai/rewrite-overview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: tvData.name, overview: tvData.overview, tmdbId: tvData.id, type: "tv" }) }).then(res => res.json()),
+                    fetch(`${API_BASE}/api/omdb?title=${encodeURIComponent(tvData.name)}&year=${tvData.first_air_date?.slice(0, 4)}`).then(res => res.json()),
+                    fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`).then(res => res.json()),
+                    fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`).then(res => res.json()),
+                    fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`).then(res => res.json()),
+                ]);
+
+                if (aiData.rewritten) setTheHook(aiData.rewritten.trim());
+                if (omdbData && !omdbData.error && omdbData.Ratings) {
+                    const imdbRating = omdbData.Ratings.find(r => r.Source === "Internet Movie Database")?.Value.split('/')[0] || null;
+                    const rtRating = omdbData.Ratings.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
+                    let uncleScore = tvData.vote_average ? parseFloat(tvData.vote_average.toFixed(1)) : null;
+                    if (uncleScore && imdbRating) { uncleScore = ((uncleScore + parseFloat(imdbRating)) / 2).toFixed(1); }
+                    setOmdbRatings({ imdb: imdbRating, rt: rtRating, uncle: uncleScore });
+                }
+                const trailer = trailerData.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
+                setTrailerKey(trailer?.key || null);
+                setCast(castData.cast?.slice(0, 18) || []);
+                setRelated(similarData.results?.slice(0, 12) || []);
+                const releaseYear = tvData.first_air_date?.slice(0, 4);
+                const wmId = await getWatchmodeId(tvData.name, releaseYear, "tv");
+                if (wmId) {
+                    const sources = await getStreamingSources(wmId);
+                    const filtered = (sources || []).filter(src => src.type === "sub" || src.type === "free");
+                    if (filtered.length > 0) {
+                        setStreamingSources(filtered);
+                    } else {
+                        setStreamingSources([{ name: "Not available for streaming in your region", type: "note", web_url: null }]);
+                    }
+                } else {
+                    setStreamingSources([]);
+                }
+            } catch (err) { console.error("Failed to fetch TV show details:", err); }
+        };
+        fetchAll();
+    }, [id]);
+
+    useEffect(() => {
+        const fetchSeasonData = async () => {
+            if (!id || !selectedSeason) return;
+            setIsSeasonLoading(true);
+            try {
+                const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}/season/${selectedSeason}`);
+                const data = await res.json();
+                setSeasonDetails(data);
+            } catch (error) {
+                console.error("Failed to fetch season details:", error);
+                setSeasonDetails(null);
+            } finally {
+                setIsSeasonLoading(false);
+            }
+        };
+        if (activeTab === 'seasons') {
+            fetchSeasonData();
+        }
+    }, [id, selectedSeason, activeTab]);
+    
+    useEffect(() => {
+        const fetchUserSpecificData = async () => {
+            if (currentUser && id) {
+                const idToken = await currentUser.getIdToken(true);
+                try {
+                    const ratingRes = await fetch(`${API_BASE}/api/ratings/tv/${id}/my-rating`, { headers: { 'Authorization': `Bearer ${idToken}` } });
+                    if (ratingRes.ok) {
+                        const data = await ratingRes.json();
+                        setUserRating(data.rating || 0);
+                    }
+                } catch (error) { console.error("Could not fetch user rating:", error); }
+                
+                try {
+                    const docId = `${currentUser.uid}_${id}_tv`;
+                    const docRef = doc(db, "watchlists", docId);
+                    const docSnap = await getDoc(docRef);
+                    setIsInWatchlist(docSnap.exists());
+                } catch (error) { console.error("Could not check watchlist status:", error); }
+            } else {
+                setUserRating(0);
+                setIsInWatchlist(false);
+            }
+        };
+        fetchUserSpecificData();
+    }, [currentUser, id]);
+
+    const toggleWatchlist = async () => {
+        if (!currentUser) {
+            alert("Please log in to manage your watchlist.");
+            return;
+        }
+        console.log("Current UID:", currentUser.uid);
+	console.log("TV ID:", id);
+	const docId = `${currentUser.uid}_${id}_tv`;
+	console.log("Computed docId:", docId);
+
+        const docRef = doc(db, "watchlists", docId);
+        
+        try {
+            if (isInWatchlist) {
+                await deleteDoc(docRef);
+                setIsInWatchlist(false);
+            } else {
+                const data = {
+                    userId: currentUser.uid,
+                    tvId: `${id}_tv`,
+                    title: tvShow.name,
+                    imageUrl: `https://image.tmdb.org/t/p/w500${tvShow.poster_path}`,
+                    rating: tvShow.vote_average,
+                };
+                await setDoc(docRef, data);
+                setIsInWatchlist(true);
+            }
+        } catch (error) {
+            console.error("Failed to update watchlist:", error);
+            alert("Could not update your watchlist. Please try again.");
+        }
     };
 
-    const fetchTVData = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}`);
-        const data = await res.json();
-        setTV(data);
-        const genresText = data.genres?.map(g => g.name).join(", ");
+    const handleRateShow = async (rating) => { if (!currentUser) { alert("Please log in to rate shows."); return; } setUserRating(rating); try { const idToken = await currentUser.getIdToken(true); await fetch(`${API_BASE}/api/ratings/tv/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ rating }), }); } catch (error) { console.error("Rating submission error:", error); alert("Could not save your rating."); setUserRating(0); } };
+    const handleReviewSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Please log in to post a comment."); return; } if (comment.trim() === "") { alert("Comment cannot be empty."); return; } setIsSubmitting(true); try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/reviews/tv/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ comment }), }); if (!response.ok) throw new Error((await response.json()).error || "Failed to submit comment."); const newReview = await response.json(); setReviews(prevReviews => [newReview, ...prevReviews]); setComment(''); } catch (error) { console.error("Comment submission error:", error); alert(`Error: ${error.message}`); } finally { setIsSubmitting(false); } };
+    const handleDeleteReview = async (reviewId) => { if (!currentUser) { alert("You must be logged in to delete."); return; } if (!window.confirm("Are you sure you want to delete this comment?")) return; try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/reviews/${reviewId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }, }); if (!response.ok) throw new Error((await response.json()).error || "Failed to delete review."); setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId)); } catch (error) { console.error("Delete error:", error); alert(`Error: ${error.message}`); } };
 
-try {
-  const aiRes = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "tv",
-      title: data.name,
-      genre: genresText,
-      overview: data.overview,
-    }),
-  });
+    if (!tvShow) return <ShimmerDetail />;
 
-  const aiData = await aiRes.json();
-if (aiData.rewritten) {
-  setAiOverview(aiData.rewritten);
-} else {
-  setAiOverview(data.overview);
-}
+    const rtScore = omdbRatings.rt ? parseInt(omdbRatings.rt.replace('%', '')) : null;
 
-} catch (err) {
-  console.error("AI Overview Rewrite Error:", err);
-}
-
-        const [omdb, wmId] = await Promise.all([
-          fetchOMDbData(data.name, data.first_air_date),
-          getWatchmodeId(data.name, data.first_air_date?.slice(0, 4))
-        ]);
-
-        if (omdb) {
-          const imdb = omdb.Ratings?.find(r => r.Source === "Internet Movie Database");
-          const rt = omdb.Ratings?.find(r => r.Source === "Rotten Tomatoes");
-
-          const imdbValue = parseFloat(imdb?.Value?.split("/")[0] || omdb.imdbRating) || null;
-          const rtValue = parseFloat(rt?.Value?.replace("%", "")) || null;
-          const tmdbValue = parseFloat(data.vote_average) || null;
-
-          const sources = [tmdbValue, imdbValue, rtValue ? rtValue / 10 : null].filter(n => typeof n === "number");
-
-          const uncleScore =
-            sources.length > 0
-              ? (sources.reduce((a, b) => a + b, 0) / sources.length).toFixed(1)
-              : null;
-
-          setOmdbRatings({
-            imdb: imdb?.Value || omdb.imdbRating || null,
-            rt: rt?.Value || null,
-            uncle: uncleScore,
-          });
-        }
-
-        if (wmId) {
-          const sources = await getStreamingSources(wmId);
-          const filtered = (sources || []).filter(src => src.type === "sub" || src.type === "free");
-          setWatchmodeSources(filtered.length ? filtered : [{ name: "Unavailable in India", type: "note", web_url: "" }]);
-        }
-
-        const trailerData = await (await fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`)).json();
-        const trailer = trailerData.results.find(v => v.type === "Trailer" && v.site === "YouTube");
-        if (trailer) setTrailerUrl(`https://www.youtube.com/embed/${trailer.key}`);
-
-        const castData = await (await fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`)).json();
-        setCast(castData.cast.slice(0, 6));
-
-        const similarData = await (await fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`)).json();
-        const genreMap = data.genres?.reduce((acc, g) => {
-          acc[g.id] = g.name;
-          return acc;
-        }, {}) || {};
-        setRelated(similarData.results.slice(0, 6).map((m) => ({
-          ...m,
-          tmdbRating: m.vote_average?.toString(),
-          language: m.original_language,
-          genres: m.genre_ids?.map((id) => genreMap[id] || "Unknown"),
-        })));
-
-        if (user) {
-          const watchSnap = await getDoc(doc(db, "watchlists", `${user.uid}_${id}_tv`));
-          setIsSaved(watchSnap.exists());
-
-          const rateSnap = await getDoc(doc(db, "ratings", `${user.uid}_${id}_tv`));
-          if (rateSnap.exists()) setUserRating(rateSnap.data().rating);
-
-          const snapshot = await getDocs(query(collection(db, "comments"), where("tvId", "==", `${id}_tv`)));
-          const commentData = snapshot.docs.map((doc) => doc.data()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          setAllComments(commentData);
-        }
-      } catch (err) {
-        console.error("TVDetail Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGenres();
-    fetchTVData();
-  }, [id, user]);
-
-  const toggleWatchlist = async () => {
-    if (!user) return;
-    const ref = doc(db, "watchlists", `${user.uid}_${id}_tv`);
-    if (isSaved) {
-      await deleteDoc(ref);
-      setIsSaved(false);
-    } else {
-      await setDoc(ref, {
-        userId: user.uid,
-        tvId: `${id}_tv`,
-        title: tv.name,
-        imageUrl: `https://image.tmdb.org/t/p/w300${tv.poster_path}`,
-        rating: tv.vote_average?.toString(),
-        timestamp: serverTimestamp(),
-      });
-      setIsSaved(true);
-    }
-  };
-
-  const handleRating = async (newRating) => {
-    if (!user || !isSaved) return;
-    const ref = doc(db, "ratings", `${user.uid}_${id}_tv`);
-    await setDoc(ref, {
-      userId: user.uid,
-      tvId: `${id}_tv`,
-      rating: newRating,
-    });
-    setUserRating(newRating);
-  };
-
-  const submitComment = async () => {
-    if (!user || !comment.trim()) return;
-    const commentId = `${user.uid}_${Date.now()}`;
-    const commentRef = doc(db, "comments", commentId);
-    await setDoc(commentRef, {
-      tvId: `${id}_tv`,
-      userId: user.uid,
-      userEmail: user.email,
-      comment: comment.trim(),
-      timestamp: new Date().toISOString(),
-    });
-    setComment("");
-    const q = query(collection(db, "comments"), where("tvId", "==", `${id}_tv`));
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map((doc) => doc.data()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    setAllComments(data);
-  };
-
-  if (loading || !tv) return <ShimmerDetail />;
-
-return (
-<div className="relative z-10 bg-white/80 dark:bg-black/70 backdrop-blur-sm min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 pb-6">
-
-
-{tv?.backdrop_path && (
-  <div className="fixed inset-0 z-0">
-    <div
-      className="absolute inset-0 bg-cover bg-center"
-      style={{
-        backgroundImage: `url(https://image.tmdb.org/t/p/original${tv.backdrop_path})`,
-        filter: "brightness(0.85)",
-      }}
-    />
-    <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/70 to-white dark:from-black/80 dark:via-black/70 dark:to-black" />
-  </div>
-)}
-
-
-    <div className="relative z-10 bg-white/80 dark:bg-black/70 backdrop-blur-sm min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-6">
-       {/* TV Info */}
-        <motion.div
-          className="flex flex-col md:flex-row items-start gap-4 sm:gap-6 lg:gap-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="flex-shrink-0 w-56 sm:w-64 md:w-80 rounded-xl overflow-hidden shadow-2xl">
-            <img
-              src={
-                tv.poster_path
-                  ? `https://image.tmdb.org/t/p/w400${tv.poster_path}`
-                  : "https://via.placeholder.com/400x600?text=No+Image"
-              }
-              alt={tv.name}
-              className="w-full aspect-[2/3] object-cover rounded-xl"
-              loading="lazy"
-            />
-          </div>
-          <div className="flex-1 space-y-4">
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 dark:text-shadow">
-              {tv.name}
-            </h1>
-            <div className="flex flex-col sm:flex-row gap-3 text-gray-600 dark:text-gray-300">
-              <p className="text-sm sm:text-base font-medium">
-                {tv.first_air_date?.slice(0, 4)} • {tv.number_of_seasons} Season{tv.number_of_seasons > 1 ? "s" : ""}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {tv.genres?.map((g) => (
-                  <Link
-                    to={`/tvshows?genre=${encodeURIComponent(g.name)}`}
-                    key={g.id}
-                    className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-700 transition"
-                    aria-label={`Go to ${g.name} TV shows`}
-                  >
-                    {g.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3 sm:gap-4 text-sm sm:text-base">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">TMDB:</span>
-                <span className="text-yellow-500 font-bold">{tv.vote_average?.toFixed(1)}</span>
-              </div>
-              {omdbRatings.imdb && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">IMDb:</span>
-                  <span className="text-yellow-400 font-bold">{omdbRatings.imdb}</span>
+    return (
+        <div className="bg-gray-900 text-gray-100" style={{ '--dominant-color': dominantColor || '#4f46e5' }}>
+            <div className="relative">
+                <div className="absolute inset-0 h-[55vh] overflow-hidden">
+                    <div className="w-full h-full bg-cover bg-top bg-no-repeat" style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${tvShow.backdrop_path})` }}></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
                 </div>
-              )}
-              {omdbRatings.rt && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">RT:</span>
-                  <span className="text-green-500 font-bold">{omdbRatings.rt}</span>
-                </div>
-              )}
-              {omdbRatings.uncle && (
-                <span className="px-3 py-1 rounded-full bg-indigo-600 text-white text-sm font-medium">
-                  Uncle Score: {omdbRatings.uncle}/10
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <motion.button
-                onClick={toggleWatchlist}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base font-medium transition-colors ${
-                  isSaved
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label={isSaved ? "Remove from watchlist" : "Add to watchlist"}
-              >
-                <Bookmark className="w-4 sm:w-5 h-4 sm:h-5" />
-                {isSaved ? "In Watchlist" : "Add to Watchlist"}
-              </motion.button>
-              <motion.select
-                value={userRating}
-                onChange={(e) => handleRating(Number(e.target.value))}
-                disabled={!isSaved}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label="Rate TV show"
-              >
-                <option value="0">Rate</option>
-                {[...Array(10)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    ⭐ {i + 1}
-                  </option>
-                ))}
-              </motion.select>
-            </div>
-
-            {watchmodeSources.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mt-3 sm:mt-4">
-                <h4 className="w-full text-sm sm:text-base font-medium text-gray-600 dark:text-gray-300">
-                  Stream on:
-                </h4>
-                {watchmodeSources.map((src) => (
-                  <a
-                    key={src.name}
-                    href={src.web_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 transition"
-                  >
-                    <PlayCircle className="w-4 sm:w-5 h-4 sm:h-5" />
-                    {src.name}
-                  </a>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 italic mt-3 sm:mt-4 text-sm sm:text-base">
-                Not available for streaming.
-              </p>
-            )}
-
-<div className="text-sm sm:text-base leading-relaxed max-w-3xl p-6 rounded-lg bg-black/70 border border-yellow-400/50 shadow-xl">
-  <p className="text-yellow-400 font-semibold drop-shadow-lg">
-    {aiOverview}
-  </p>
-</div>
-          </div>
-        </motion.div>
-
-        {/* Trailer */}
-        {trailerUrl && (
-          <motion.section
-            className="mt-8 sm:mt-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-gray-900 dark:text-indigo-400 dark:text-shadow">
-              <PlayCircle className="w-5 sm:w-6 h-5 sm:h-6" /> Watch Trailer
-            </h3>
-            <div className="relative overflow-hidden rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 aspect-video">
-              <iframe
-                src={trailerUrl}
-                title="Trailer"
-                className="w-full h-full rounded-xl"
-                allowFullScreen
-              />
-            </div>
-          </motion.section>
-        )}
-
-        {/* Cast */}
-        {cast.length > 0 && (
-          <motion.section
-            className="mt-8 sm:mt-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-gray-900 dark:text-indigo-400 dark:text-shadow">
-              <Users className="w-5 sm:w-6 h-5 sm:h-6" /> Cast
-            </h2>
-            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
-              {cast.map((member) => (
-                <Link
-                  key={member.id}
-                  to={`/person/${member.id}`}
-                  className="flex-shrink-0 w-36 sm:w-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg hover:shadow-xl transition"
-                  aria-label={`View ${member.name} profile`}
-                >
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <img
-                      src={
-                        member.profile_path
-                          ? `https://image.tmdb.org/t/p/w300${member.profile_path}`
-                          : "https://via.placeholder.com/300x450?text=No+Image"
-                      }
-                      alt={member.name}
-                      className="w-full h-44 sm:h-48 object-cover"
-                      loading="lazy"
-                    />
-                    <p className="text-center p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 line-clamp-2">
-                      {member.name}
-                    </p>
-                  </motion.div>
-                </Link>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Related Shows */}
-        {related.length > 0 && (
-          <motion.section
-            className="mt-8 sm:mt-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-gray-900 dark:text-indigo-400 dark:text-shadow">
-              <PlayCircle className="w-5 sm:w-6 h-5 sm:h-6" /> Related Shows
-            </h2>
-            <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
-              {related.map((m) => (
-                <MovieCard
-                  key={m.id}
-                  id={m.id}
-                  title={m.name}
-                  imageUrl={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
-                  tmdbRating={m.tmdbRating}
-                  genres={m.genres}
-                  language={m.original_language}
-                  isTV={true}
-                />
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Comments */}
-        <motion.section
-          className="mt-8 sm:mt-12"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-gray-900 dark:text-indigo-400 dark:text-shadow">
-            <MessageCircle className="w-5 sm:w-6 h-5 sm:h-6" /> Comments
-          </h2>
-          {user && (
-            <div className="flex flex-col gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Share your thoughts..."
-                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[80px] sm:min-h-[100px]"
-                aria-label="Comment input"
-              />
-              <motion.button
-                onClick={submitComment}
-                className="px-4 sm:px-6 py-2 rounded-xl bg-indigo-600 text-white text-sm sm:text-base font-medium hover:bg-indigo-700 transition"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label="Post comment"
-              >
-                Post Comment
-              </motion.button>
-            </div>
-          )}
-          {allComments.length > 0 ? (
-            <ul className="space-y-3 sm:space-y-4">
-              {allComments.slice(0, showAllComments ? undefined : 3).map((c) => (
-                <motion.li
-                  key={c.timestamp}
-                  className="bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 rounded-xl shadow-md"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                    <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs sm:text-sm font-medium">
-                      {c.userEmail.charAt(0).toUpperCase()}
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row gap-8 pt-[25vh]">
+                        <motion.div className="w-40 md:w-52 flex-shrink-0" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                            <img src={posterUrl ? posterUrl.replace('w200', 'w500') : "https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image"} alt={tvShow.name} className="w-full h-auto rounded-xl shadow-2xl shadow-black/60" />
+                        </motion.div>
+                        <div className="flex flex-col justify-end flex-1 pb-4">
+                            <motion.h1 className="text-4xl md:text-6xl font-black tracking-tighter" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}>{tvShow.name}</motion.h1>
+                            <motion.div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}>
+                                <span>{tvShow.first_air_date?.slice(0, 4)}</span>
+                                {tvShow.number_of_seasons && <span>• {tvShow.number_of_seasons} Season{tvShow.number_of_seasons > 1 ? 's' : ''}</span>}
+                                <div className="flex flex-wrap gap-2">{tvShow.genres?.slice(0, 3).map(g => (<Link to={`/tvshows?genre=${g.name}`} key={g.id} className="text-xs font-semibold bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/20 transition-colors">{g.name}</Link>))}</div>
+                            </motion.div>
+                            <motion.div className="mt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.4 } }}>
+                                <button
+                                    onClick={toggleWatchlist}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-300 ${ isInWatchlist ? "bg-green-600 text-white hover:bg-green-700" : "bg-white/10 backdrop-blur-sm text-white hover:bg-white/20" }`}
+                                >
+                                    <Bookmark className="w-4 h-4" />
+                                    {isInWatchlist ? "In Watchlist" : "Add to Watchlist"}
+                                </button>
+                            </motion.div>
+                        </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">{c.userEmail}</p>
-                  </div>
-                  <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 whitespace-pre-line">
-                    {c.comment}
-                  </p>
-                </motion.li>
-              ))}
-              {allComments.length > 0 && (
-                <motion.button
-                  onClick={() => setShowAllComments(!showAllComments)}
-                  className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm sm:text-base"
-                  whileHover={{ scale: 1.05 }}
-                  aria-label={showAllComments ? "Show fewer comments" : "Show all comments"}
-                >
-                  {showAllComments ? "Show Fewer" : `Show All (${allComments.length})`}
-                </motion.button>
-              )}
-            </ul>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 italic text-sm sm:text-base">
-              No comments yet. Be the first to share your thoughts!
-            </p>
-          )}
-        </motion.section>
-      </div>
 
-      <style jsx={true}>{`
-        .scrollbar-thin::-webkit-scrollbar {
-          height: 6px;
-          width: 6px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background-color: #6366f1;
-          border-radius: 3px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-track {
-          background-color: #e5e7eb;
-        }
-        .dark .scrollbar-thin::-webkit-scrollbar-track {
-          background-color: #1f2937;
-        }
-        .dark .text-shadow {
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        }
-      `}</style>
-    </div>
-  );
+                    <div className="py-8">
+                        {streamingSources.length > 0 && <WatchOnSection sources={streamingSources} />}
+                        <div className="border-b border-gray-700 mb-6">
+                            <nav className="flex space-x-2 sm:space-x-4">
+                                <TabButton active={activeTab === 'synopsis'} onClick={() => setActiveTab('synopsis')}>Details</TabButton>
+                                <TabButton active={activeTab === 'seasons'} onClick={() => setActiveTab('seasons')}>Seasons</TabButton>
+                                <TabButton active={activeTab === 'cast'} onClick={() => setActiveTab('cast')}>Cast & Crew</TabButton>
+                                <TabButton active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>Comments</TabButton>
+                                <TabButton active={activeTab === 'related'} onClick={() => setActiveTab('related')}>Related</TabButton>
+                            </nav>
+                        </div>
+                        <AnimatePresence mode="wait">
+                            <motion.div key={activeTab} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -10, opacity: 0 }} transition={{ duration: 0.2 }}>
+                                {activeTab === 'synopsis' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                        <div className="md:col-span-2">
+                                            <h3 className="text-2xl font-bold mb-4">Synopsis</h3>
+                                            {theHook && (<div className="mb-6 p-4 rounded-lg bg-gray-800 border-l-4 border-[var(--dominant-color)]"><p className="text-gray-300 italic">"{theHook}"</p></div>)}
+                                            <p className="text-gray-300 leading-relaxed whitespace-pre-line">{tvShow.overview}</p>
+                                            {trailerKey && (<div className="mt-8"> <h3 className="text-2xl font-bold mb-4 text-white"><Film className="inline w-6 h-6 mr-2"/>Trailer</h3> <div className="aspect-video"><iframe src={`https://www.youtube.com/embed/${trailerKey}`} title="Trailer" className="w-full h-full rounded-lg" allowFullScreen/></div> </div>)}
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div><h3 className="text-xl font-bold text-white mb-3">Your Rating</h3><div className="bg-gray-800 p-4 rounded-lg"><InteractiveStarRating currentRating={userRating} onRate={handleRateShow} disabled={!currentUser} />{!currentUser && <p className="text-xs text-gray-500 mt-2">Log in to rate this show.</p>}</div></div>
+                                            <div><h3 className="text-xl font-bold text-white mb-3">Community Ratings</h3><div className="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">{omdbRatings.uncle && <RatingCircle score={omdbRatings.uncle} label="Uncle Score" color={dominantColor} />}{tvShow.vote_average > 0 && <RatingCircle score={tvShow.vote_average.toFixed(1)} label="TMDB" color="#eab308" />}{omdbRatings.imdb && <RatingCircle score={omdbRatings.imdb} label="IMDb" color="#f5c518" />}{rtScore && <RatingCircle score={rtScore} maxValue={100} label="Rotten Tomatoes" color="#ef4444" />}</div></div>
+                                        </div>
+                                    </div>
+                                )}
+                                {activeTab === 'seasons' && (
+                                    <SeasonsTab tvShow={tvShow} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} seasonDetails={seasonDetails} isLoading={isSeasonLoading} />
+                                )}
+                                {activeTab === 'cast' && (
+                                     <div>
+                                        <h3 className="text-2xl font-bold mb-4 text-white">Top Billed Cast</h3>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">{cast.map(member => (<Link key={member.id} to={`/person/${member.id}`} className="text-center group"><div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105"><img src={member.profile_path ? `https://image.tmdb.org/t/p/w342${member.profile_path}` : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"} alt={member.name} className="w-full h-full object-cover" loading="lazy" /></div><p className="text-sm font-bold truncate">{member.name}</p><p className="text-xs text-gray-400 truncate">{member.character}</p></Link>))}</div>
+                                    </div>
+                                )}
+                                {activeTab === 'reviews' && (
+                                     <div>
+                                        <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><MessageSquare className="w-6 h-6 text-[var(--dominant-color)]"/>Community Comments</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="bg-gray-800 p-6 rounded-lg">
+                                                <h4 className="text-lg font-semibold mb-4">Leave a Comment</h4>
+                                                {currentUser ? (<form onSubmit={handleReviewSubmit}><div className="mb-4"><textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} rows="4" className="w-full p-2 bg-gray-700 rounded-md focus:ring-2 focus:ring-[var(--dominant-color)] outline-none" placeholder="Share your thoughts..."></textarea></div><button type="submit" disabled={isSubmitting} className="w-full px-5 py-2.5 rounded-full font-semibold bg-[var(--dominant-color)] hover:opacity-90 disabled:bg-gray-600 text-white text-sm transition-opacity">{isSubmitting ? "Submitting..." : "Submit Comment"}</button></form>) : (<p className="text-gray-400">Please <Link to="/login" className="text-[var(--dominant-color)] hover:underline">log in</Link> to leave a comment.</p>)}
+                                            </div>
+                                            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">{reviews.length > 0 ? (reviews.map(review => (<ReviewCard key={review.id} review={review} isAdmin={isAdmin} onDelete={handleDeleteReview} />))) : (<div className="text-center text-gray-500 py-10"><p>No comments yet.</p><p>Be the first to share your thoughts!</p></div>)}</div>
+                                        </div>
+                                     </div>
+                                )}
+                                {activeTab === 'related' && (
+                                   <div>
+                                       <h3 className="text-2xl font-bold mb-4 text-white">You Might Also Like</h3>
+                                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">{related.map(m => <MovieCard key={m.id} id={m.id} title={m.name} isTV={true} imageUrl={m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null} tmdbRating={m.vote_average?.toString()} />)}</div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default TVDetail;

@@ -1,27 +1,27 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 🟢 Watchlists: Only owner can read/write
-    match /watchlists/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+    // --- WATCHLISTS ---
+    match /watchlists/{watchlistId} {
+      // Allow read if the user is logged in and owns this watchlist
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow write if the user is logged in and owns this watchlist
+      allow write: if request.auth != null && (request.resource.data.userId == request.auth.uid);
     }
 
-    // 🟢 Ratings: Only owner can read/write
-    match /ratings/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+    // --- RATINGS ---
+    match /ratings/{ratingId} {
+      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // 🟡 Comments: Anyone can read, only owner can write
-    match /comments/{docId} {
+    // --- REVIEWS ---
+    match /reviews/{reviewId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
-
-    // 🔒 Deny everything else
-    match /{document=**} {
-      allow read, write: if false;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (get(/databases/$(database)/documents/reviews/$(reviewId)).data.userId == request.auth.uid || request.auth.token.isAdmin == true);
     }
   }
 }
+

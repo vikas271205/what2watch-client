@@ -1,49 +1,46 @@
+// src/components/Footer.jsx
+
 import { Link } from "react-router-dom";
-import { Github, Twitter } from "lucide-react"; // Import icons
+import { Github, Twitter } from "lucide-react";
 
 function Footer() {
   return (
-    <footer className="bg-slate-900 text-gray-400 px-6 py-10">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {/* Column 1: Logo + Intro */}
-          <div>
-            <h2 className="text-white text-2xl font-bold mb-3">🎬 UncleFilmFinder</h2>
-            <p className="text-sm leading-relaxed">
-              Your AI-powered guide to discovering trending movies, TV shows, and hidden gems.
-            </p>
+    <footer className="bg-gray-900 border-t border-gray-800 text-gray-400">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col items-center gap-6">
+
+          {/* Logo */}
+          <h2 className="text-white text-3xl font-black tracking-tighter">
+            UncleFilmFinder
+          </h2>
+
+          {/* Navigation Links */}
+          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium">
+            <Link to="/" className="hover:text-indigo-400 transition-colors">Home</Link>
+            <Link to="/trending" className="hover:text-indigo-400 transition-colors">Trending</Link>
+            <Link to="/watchlist" className="hover:text-indigo-400 transition-colors">Watchlist</Link>
+            <Link to="/search" className="hover:text-indigo-400 transition-colors">Search</Link>
+          </nav>
+          
+          {/* Divider */}
+          <div className="w-24 border-t border-gray-700"></div>
+
+          {/* Social Icons */}
+          <div className="flex gap-5">
+            <a href="https://github.com/" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-indigo-400 transition-colors">
+              <Github className="w-5 h-5" />
+            </a>
+            <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="hover:text-indigo-400 transition-colors">
+              <Twitter className="w-5 h-5" />
+            </a>
           </div>
 
-          {/* Column 2: Navigation */}
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Navigation</h3>
-            <ul className="space-y-3 text-sm">
-              <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
-              <li><Link to="/trending" className="hover:text-white transition-colors">Trending</Link></li>
-              <li><Link to="/watchlist" className="hover:text-white transition-colors">Watchlist</Link></li>
-              <li><Link to="/search" className="hover:text-white transition-colors">Search</Link></li>
-            </ul>
+          {/* Copyright & Disclaimer */}
+          <div className="text-center text-xs text-gray-500">
+            <p>© 2025 UncleFilmFinder. All Rights Reserved.</p>
+            <p className="mt-1">All movie data provided by The Movie Database (TMDB). This project is for educational purposes only.</p>
           </div>
 
-          {/* Column 3: Contact + Socials */}
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Contact</h3>
-            <p className="text-sm mb-4">📧 hello@unclefilmfinder.com</p>
-            <div className="flex gap-4">
-              <a href="https://github.com/" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-                <Github className="w-5 h-5 hover:text-white transition-colors" />
-              </a>
-              <a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-                <Twitter className="w-5 h-5 hover:text-white transition-colors" />
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Separator and Copyright */}
-        <hr className="border-t border-gray-700/50 my-8" />
-        <div className="text-center text-xs text-gray-500">
-          © 2025 UncleFilmFinder. All rights reserved.
         </div>
       </div>
     </footer>
