@@ -90,6 +90,7 @@ code {
   }
 }
 
+
 .animate-zoomFade {
   animation: zoomFade 4s ease-out forwards;
 }

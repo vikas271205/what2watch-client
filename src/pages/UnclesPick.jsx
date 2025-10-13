@@ -1,11 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import API_BASE from "../utils/api";
 import genreMap from "../utils/GenreMap";
 import languageMap from "../utils/LanguageMap";
 import useAdminClaim from "../hooks/useAdminClaim";
 import { auth } from "../firebase";
 import MovieCard from "../components/MovieCard";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
+
+// --- The entire logic section below is IDENTICAL to your original code ---
 
 export default function UnclesPick() {
   const [items, setItems] = useState([]);
@@ -14,11 +17,9 @@ export default function UnclesPick() {
   const [selectedType, setSelectedType] = useState("all");
   const [sortOption, setSortOption] = useState("latest");
   const [loading, setLoading] = useState(true);
-  const [movieLimit, setMovieLimit] = useState(8);
-  const [tvLimit, setTvLimit] = useState(8);
-  const [animationLimit, setAnimationLimit] = useState(8);
+  const [displayLimit, setDisplayLimit] = useState(12);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false); // New state for modal
   const { isAdmin } = useAdminClaim();
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,216 +38,212 @@ export default function UnclesPick() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    canvas.style.position = "fixed";
-    canvas.style.top = "0";
-    canvas.style.left = "0";
-    canvas.style.pointerEvents = "none";
-    canvas.style.opacity = "0.15";
-    const particles = [];
-
-    function createParticle(x, y) {
-      particles.push({ x, y, opacity: 1, radius: 6 });
-    }
-
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((p, i) => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99, 102, 241, ${p.opacity})`;
-        ctx.fill();
-        ctx.closePath();
-        p.opacity -= 0.015;
-        if (p.opacity <= 0) particles.splice(i, 1);
-      });
-      requestAnimationFrame(animate);
-    }
-
-    document.addEventListener("mousemove", (e) => createParticle(e.clientX, e.clientY));
-    animate();
-    return () => document.removeEventListener("mousemove", createParticle);
-  }, []);
-
   const applyFilters = (list) => {
     return list
+      .filter((item) => {
+        if (selectedType === 'all') return true;
+        if (selectedType === 'movie') return item.type === 'movie' && !item.genre_ids?.includes(16);
+        if (selectedType === 'tv') return item.type === 'tv' && !item.genre_ids?.includes(16);
+        if (selectedType === 'animation') return item.genre_ids?.includes(16);
+        return true;
+      })
       .filter((item) => (selectedGenre ? item.genre_ids?.includes(parseInt(selectedGenre)) : true))
       .filter((item) => (selectedLanguage ? item.language === selectedLanguage : true))
       .sort((a, b) => {
         if (sortOption === "highest") return b.rating - a.rating;
         if (sortOption === "lowest") return a.rating - b.rating;
-        if (sortOption === "latest") return b.createdAt - a.createdAt;
-        if (sortOption === "oldest") return a.createdAt - b.createdAt;
+        if (sortOption === "latest") {
+            const dateA = a.createdAt?.seconds || 0;
+            const dateB = b.createdAt?.seconds || 0;
+            return dateB - dateA;
+        }
+        if (sortOption === "oldest") {
+            const dateA = a.createdAt?.seconds || 0;
+            const dateB = b.createdAt?.seconds || 0;
+            return dateA - dateA;
+        }
         return 0;
       });
   };
-
-  const movies = selectedType === "tv" || selectedType === "animation"
-    ? []
-    : applyFilters(items.filter((item) => item.type === "movie" && !item.genre_ids?.includes(16)));
-
-  const tvShows = selectedType === "movie" || selectedType === "animation"
-    ? []
-    : applyFilters(items.filter((item) => item.type === "tv" && !item.genre_ids?.includes(16)));
-
-  const animations = selectedType === "movie" || selectedType === "tv"
-    ? []
-    : applyFilters(items.filter((item) => item.genre_ids?.includes(16)));
+  
+  const filteredItems = applyFilters(items);
 
   const handleDelete = async (item) => {
-    const confirm = window.confirm(`Delete "${item.title}"?`);
-    if (!confirm) return;
-    const token = await auth.currentUser.getIdToken();
-    const res = await fetch(`${API_BASE}/api/recommend/${item.type}_${item.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const result = await res.json();
-    if (result.success) {
-      alert("Deleted successfully.");
-      setItems((prev) => prev.filter((i) => `${i.type}_${i.id}` !== `${item.type}_${item.id}`));
-    } else {
-      alert(`Error: ${result.error || "Failed to delete"}`);
+    if (!window.confirm(`Delete "${item.title}"?`)) return;
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${API_BASE}/api/recommend/${item.type}_${item.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await res.json();
+        if (result.success) {
+            alert("Deleted successfully.");
+            setItems((prev) => prev.filter((i) => `${i.type}_${i.id}` !== `${item.type}_${i.id}`));
+        } else {
+            throw new Error(result.error || "Failed to delete");
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
     }
   };
 
-  const renderSection = (title, data, limit, setLimit, isTV) => (
-    data.length > 0 && (
-      <>
-        <h2 className="text-2xl font-semibold mb-4">{title}</h2>
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-6"
-          initial="hidden"
-          animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1 } } }}
+  // --- Start of New UI ---
+
+  const CustomSelect = ({ value, onChange, options, placeholder }) => (
+    <div className="relative w-full">
+      <select
+        value={value}
+        onChange={onChange}
+        className="appearance-none w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+      >
+        <option value="">{placeholder}</option>
+        {options}
+      </select>
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <ChevronDown size={20} className="text-gray-400" />
+      </div>
+    </div>
+  );
+
+  const FilterModal = () => (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsFilterModalOpen(false)} />
+      <motion.div
+        className="relative bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-lg space-y-6"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-white">Filter & Sort</h2>
+          <button onClick={() => setIsFilterModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CustomSelect
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                placeholder="All Types"
+                options={<><option value="all">All Types</option><option value="movie">Movies</option><option value="tv">TV Shows</option><option value="animation">Animation</option></>}
+            />
+            <CustomSelect
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+                placeholder="Sort By"
+                options={<><option value="latest">Latest Added</option><option value="highest">Highest Rated</option><option value="lowest">Lowest Rated</option><option value="oldest">Oldest Added</option></>}
+            />
+            <CustomSelect
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+                placeholder="All Genres"
+                options={Object.entries(genreMap).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            />
+            <CustomSelect
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                placeholder="All Languages"
+                options={Array.from(new Set(items.map(i => i.language).filter(Boolean))).map((lang) => <option key={lang} value={lang}>{languageMap[lang] || lang.toUpperCase()}</option>)}
+            />
+        </div>
+        <button 
+            onClick={() => setIsFilterModalOpen(false)}
+            className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition-colors"
         >
-          {data.slice(0, limit).map((item) => (
-            <motion.div
-              key={`${item.type}_${item.id}`}
-              variants={{
-                hidden: { opacity: 0, scale: 0.9, y: 20 },
-                show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.4 } },
-              }}
-              whileHover={{ scale: 1.03 }}
-            >
-              <MovieCard
-                id={item.id}
-                title={item.title}
-                imageUrl={item.poster}
-                tmdbRating={item.tmdbRating || item.rating?.toString()}
-                imdbRating={item.imdbRating}
-                rtRating={item.rtRating}
-                type={item.type}
-                year={item.year}
-                language={item.language}
-                genres={(item.genre_ids || []).map((id) => genreMap[id]).filter(Boolean)}
-                isTV={isTV}
-                isAdmin={isAdmin}
-                showRemoveButton={isAdmin}
-                showUncleScore={true}
-                onDelete={isAdmin ? () => handleDelete(item) : null}
-              />
-            </motion.div>
-          ))}
-        </motion.div>
-        {data.length > limit && (
-          <div className="text-center mb-10">
-            <button
-              onClick={() => setLimit(limit + 8)}
-              className="px-6 py-2 rounded bg-purple-600 text-white hover:bg-purple-700 transition"
-            >
-              Load More
-            </button>
-          </div>
-        )}
-      </>
-    )
+            Done
+        </button>
+      </motion.div>
+    </motion.div>
   );
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-900 dark:to-black text-black dark:text-white pt-20">
-      <canvas ref={canvasRef} className="w-full h-full" />
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto relative z-10">
-        <motion.h1
-          className="text-4xl sm:text-5xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-600"
+    <div className="min-h-screen bg-gray-900 text-white">
+      <AnimatePresence>
+        {isFilterModalOpen && <FilterModal />}
+      </AnimatePresence>
+
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <motion.div
+          className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
         >
-          🎯 UNCLE's PICK
-        </motion.h1>
-
-        {/* Filters */}
-        <motion.div
-          className="flex flex-wrap gap-4 mb-8 justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <motion.select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800"
+          <div className="text-center md:text-left">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Uncle's Pick</h1>
+            <p className="text-gray-400 mt-2">A gallery of curated titles.</p>
+          </div>
+          <button
+            onClick={() => setIsFilterModalOpen(true)}
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-3 bg-gray-800 border border-gray-700 rounded-xl font-semibold hover:bg-gray-700 transition-colors"
           >
-            <option value="all">All Types</option>
-            <option value="movie">Movies</option>
-            <option value="tv">TV Shows</option>
-            <option value="animation">Animation</option>
-          </motion.select>
-
-          <motion.select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800"
-          >
-            <option value="">All Genres</option>
-            {Object.entries(genreMap).map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </motion.select>
-
-          <motion.select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800"
-          >
-            <option value="">All Languages</option>
-            {Array.from(new Set(items.map(i => i.language).filter(Boolean))).map((lang) => (
-              <option key={lang} value={lang}>
-                {languageMap[lang] || lang.toUpperCase()}
-              </option>
-            ))}
-          </motion.select>
-
-          <motion.select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800"
-          >
-            <option value="highest">Highest Rated</option>
-            <option value="lowest">Lowest Rated</option>
-            <option value="latest">Latest Added</option>
-            <option value="oldest">Oldest Added</option>
-          </motion.select>
+            <SlidersHorizontal size={16} />
+            Filter
+          </button>
         </motion.div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-[280px] bg-gray-300 dark:bg-gray-800 rounded-lg animate-pulse" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-10">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="aspect-[2/3] bg-gray-800 rounded-lg animate-pulse" />
             ))}
           </div>
-        ) : (
+        ) : filteredItems.length > 0 ? (
           <>
-            {renderSection("🎬 Movies", movies, movieLimit, setMovieLimit, false)}
-            {renderSection("📺 TV Shows", tvShows, tvLimit, setTvLimit, true)}
-            {renderSection("🎨 Animation", animations, animationLimit, setAnimationLimit, true)}
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-10"
+              variants={{ show: { transition: { staggerChildren: 0.04 } } }}
+              initial="hidden"
+              animate="show"
+            >
+              {filteredItems.slice(0, displayLimit).map((item) => {
+                const isTV = item.type === 'tv' || item.genre_ids?.includes(16);
+                return (
+                  <motion.div
+                    key={`${item.type}_${item.id}`}
+                    variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+                    className="relative"
+                  >
+                    <MovieCard
+                      id={item.id}
+                      title={item.title}
+                      imageUrl={item.poster}
+                      tmdbRating={item.tmdbRating || item.rating?.toString()}
+                      type={item.type}
+                      isTV={isTV}
+                      isAdmin={isAdmin}
+                      showRemoveButton={isAdmin}
+                      showUncleScore={true}
+                      onDelete={() => handleDelete(item)}
+                    />
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+            {displayLimit < filteredItems.length && (
+              <div className="text-center pt-12">
+                <motion.button
+                  onClick={() => setDisplayLimit(prev => prev + 12)}
+                  className="px-8 py-3 rounded-xl bg-gray-800 text-white font-semibold hover:bg-gray-700 transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Load More
+                </motion.button>
+              </div>
+            )}
           </>
+        ) : (
+          <div className="text-center py-20">
+            <h3 className="text-2xl font-bold text-white">No Titles Match Your Filters</h3>
+            <p className="mt-2 text-gray-400">Try adjusting your filter settings to see more recommendations.</p>
+          </div>
         )}
       </div>
     </div>

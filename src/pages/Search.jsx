@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { auth, db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth"; 
 import {
   collection,
   query,
@@ -31,7 +32,15 @@ function Search() {
   const recognitionRef = useRef(null);
   const inputRef = useRef(null);
   const suggestionRef = useRef(null);
-  const user = auth.currentUser;
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  
+    useEffect(() => {
+	    const unsubscribe = onAuthStateChanged(auth, (user) => {
+	      setCurrentUser(user);
+	    });
+	    return () => unsubscribe();
+	  }, []);
+
   
   const processResults = (data) => {
     const filteredResults = (data || [])
@@ -59,17 +68,29 @@ function Search() {
     }
   }, [initialQuery]);
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchHistory = async () => {
-      const q = query(collection(db, "searches"), where("userId", "==", user.uid), orderBy("timestamp", "desc"));
+useEffect(() => {
+  if (!currentUser) return;
+  const fetchHistory = async () => {
+    try {
+      const q = query(
+        collection(db, "searches"),
+        where("userId", "==", currentUser.uid),
+        orderBy("timestamp", "desc")
+      );
       const snapshot = await getDocs(q);
-      const terms = snapshot.docs.map((doc) => ({ id: doc.id, term: doc.data().term?.trim() || "" })).filter((item) => item.term);
+      const terms = snapshot.docs
+        .map((doc) => ({ id: doc.id, term: doc.data().term?.trim() || "" }))
+        .filter((item) => item.term);
       const uniqueTerms = Array.from(new Map(terms.map(item => [item.term, item])).values());
       setHistory(uniqueTerms.slice(0, 5));
-    };
-    fetchHistory();
-  }, [user]);
+    } catch (err) {
+      console.error("Could not fetch search history:", err);
+      setHistory([]);
+    }
+  };
+  fetchHistory();
+}, [currentUser]);
+
 
   useEffect(() => {
     const fetchRandomMovies = async () => {
@@ -120,21 +141,21 @@ function Search() {
     if (!term) return;
     await searchTMDB(term);
     setSuggestions([]);
-    if (user && !history.find((item) => item.term === term)) {
-      const id = `${user.uid}_${term.replace(/\s+/g, '_')}_${Date.now()}`;
-      await setDoc(doc(db, "searches", id), { userId: user.uid, term, timestamp: serverTimestamp() });
+    if (currentUser && !history.find((item) => item.term === term)) {
+      const id = `${currentUser.uid}_${term.replace(/\s+/g, '_')}_${Date.now()}`;
+      await setDoc(doc(db, "searches", id), { userId: currentUser.uid, term, timestamp: serverTimestamp() });
       setHistory((prev) => [{ id, term }, ...prev.slice(0, 4)]);
     }
   };
 
   const handleRemoveTerm = async (idToRemove) => {
-    if (!user) return;
+    if (!currentUser) return;
     await deleteDoc(doc(db, "searches", idToRemove));
     setHistory((prev) => prev.filter((item) => item.id !== idToRemove));
   };
 
   const handleClearAll = async () => {
-    if (!user) return;
+    if (!currentUser) return;
     const deletes = history.map(item => deleteDoc(doc(db, "searches", item.id)));
     await Promise.all(deletes);
     setHistory([]);
