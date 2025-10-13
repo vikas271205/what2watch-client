@@ -12,7 +12,8 @@ import ShimmerDetail from "../components/ShimmerDetail";
 import RatingCircle from "../components/RatingCircle";
 import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark } from "lucide-react";
+import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark, Play } from "lucide-react";
+
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -38,61 +39,61 @@ const InteractiveStarRating = ({ totalStars = 10, currentRating = 0, onRate, dis
 
 const TabButton = ({ active, onClick, children }) => (<button onClick={onClick} className={`px-4 py-2 text-sm sm:text-base font-semibold rounded-full transition-colors duration-300 relative ${active ? "text-white" : "text-gray-400 hover:text-white"}`}>{children}{active && (<motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--dominant-color)]" layoutId="underline"/>)}</button>);
 
-const indianSources = [203, 157, 26, 372, 387, 371, 122]; // Netflix, Hulu, Prime, Disney+, HBO, Apple TV+, Hotstar
 
-const sourceDetails = {
-  203: { name: 'Netflix', color: '#E50914' },
-  157: { name: 'Hulu', color: '#1CE783' },
-  26: { name: 'Prime Video', color: '#00A8E1' },
-  372: { name: 'Disney+', color: '#113CCF' },
-  387: { name: 'HBO Max', color: '#5C4AE1' },
-  371: { name: 'Apple TV+', color: '#A2AAAD' },
-  122: { name: 'Hotstar', color: '#0071CE' }
-};
-
+// --- FIX: Replaced the old WatchOnSection with the one from MovieDetail.jsx for UI consistency ---
 const WatchOnSection = ({ sources }) => {
-  const filteredSources = sources
-    .filter(s => indianSources.includes(s.source_id))
-    .filter((source, index, self) => index === self.findIndex(s => s.source_id === source.source_id)); // remove duplicates
+    const sourceDetails = {
+        203: { name: 'Netflix', color: '#E50914' },
+        157: { name: 'Hulu', color: '#1CE783' },
+        26: { name: 'Prime Video', color: '#00A8E1' },
+        372: { name: 'Disney+', color: '#111942' },
+        387: { name: 'HBO Max', color: '#815DFF' },
+        371: { name: 'Apple TV+', color: '#000000' },
+        122: { name: 'Hotstar', color: '#103C85' }
+    };
 
-  if (filteredSources.length === 0) {
+    const uniqueSources = sources.filter((source, index, self) => index === self.findIndex((s) => s.source_id === source.source_id));
+
     return (
-      <div className="mb-8 p-6 rounded-2xl bg-gray-800">
-        <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <PlayCircle className="w-6 h-6 text-[var(--dominant-color)]" /> Stream Now On
-        </h3>
-        <p className="text-gray-400">Not available for streaming in India.</p>
-      </div>
+        <motion.div 
+            className="mb-8 p-6 rounded-2xl bg-gray-800" 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+        >
+            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <PlayCircle className="w-6 h-6 text-[var(--dominant-color)]" /> Stream Now On
+            </h3>
+            <div className="flex flex-wrap gap-3">
+                {uniqueSources.map(source => {
+                    const details = sourceDetails[source.source_id];
+                    if (!details && source.type !== 'note') return null;
+
+                    if (source.type === 'note') {
+                        return <div key={source.name} className="flex items-center p-2"><span className="font-semibold text-sm text-gray-400">{source.name}</span></div>;
+                    }
+
+                    return (
+                        <a 
+                            key={source.source_id} 
+                            href={source.web_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-white font-bold text-sm px-4 py-2 rounded-full transition-transform duration-200 ease-in-out transform hover:scale-105"
+                            style={{ 
+                                backgroundColor: details.color,
+                                border: `2px solid ${details.color}`
+                            }}
+                            title={`Watch on ${details.name}`}
+                        >
+                            <Play size={14} className="fill-current" />
+                            <span>{details.name}</span>
+                        </a>
+                    );
+                })}
+            </div>
+        </motion.div>
     );
-  }
-
-  return (
-    <motion.div className="mb-8 p-6 rounded-2xl bg-gray-800">
-      <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-        <PlayCircle className="w-6 h-6 text-[var(--dominant-color)]" /> Stream Now On
-      </h3>
-      <div className="flex flex-wrap gap-4">
-        {filteredSources.map(source => {
-          const details = sourceDetails[source.source_id];
-          if (!details) return null;
-
-          return (
-            <a
-              key={source.source_id}
-              href={source.web_url || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 bg-gray-900/50 hover:bg-gray-700 transition-all duration-300 p-2 pr-4 rounded-lg transform hover:scale-105"
-              style={{ borderLeft: `4px solid ${details.color}` }}
-              title={`Watch on ${details.name}`}
-            >
-              <span className="font-semibold text-sm text-white">{details.name}</span>
-            </a>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
 };
 
 
@@ -170,14 +171,18 @@ function TVDetail() {
     const { data: dominantColor } = useColor(posterUrl, 'hex', { crossOrigin: 'anonymous', quality: 10 });
 
     useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user); // updates state when user signs in/out
-      console.log("Signed in:", user?.uid, user?.email);
-    });
-
-    return () => unsubscribe(); // cleanup listener
-  }, []);
+        const auth = getAuth();
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          setCurrentUser(user);
+          if (user) {
+            const tokenResult = await user.getIdTokenResult();
+            setIsAdmin(tokenResult.claims.isAdmin === true);
+          } else {
+            setIsAdmin(false);
+          }
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         setTvShow(null);
@@ -187,7 +192,7 @@ function TVDetail() {
             try {
                 const [tvRes, reviewsRes] = await Promise.all([
                     fetch(`${API_BASE}/api/tmdb/tv/${id}`),
-                    fetch(`${API_BASE}/api/reviews/tv/${id}`)
+                    fetch(`${API_BASE}/api/tv/${id}/reviews`)
                 ]);
                 
                 const tvData = await tvRes.json();
@@ -261,7 +266,7 @@ function TVDetail() {
             if (currentUser && id) {
                 const idToken = await currentUser.getIdToken(true);
                 try {
-                    const ratingRes = await fetch(`${API_BASE}/api/ratings/tv/${id}/my-rating`, { headers: { 'Authorization': `Bearer ${idToken}` } });
+                    const ratingRes = await fetch(`${API_BASE}/api/tv/${id}/my-rating`, { headers: { 'Authorization': `Bearer ${idToken}` } });
                     if (ratingRes.ok) {
                         const data = await ratingRes.json();
                         setUserRating(data.rating || 0);
@@ -287,11 +292,7 @@ function TVDetail() {
             alert("Please log in to manage your watchlist.");
             return;
         }
-        console.log("Current UID:", currentUser.uid);
-	console.log("TV ID:", id);
-	const docId = `${currentUser.uid}_${id}_tv`;
-	console.log("Computed docId:", docId);
-
+        const docId = `${currentUser.uid}_${id}_tv`;
         const docRef = doc(db, "watchlists", docId);
         
         try {
@@ -301,10 +302,12 @@ function TVDetail() {
             } else {
                 const data = {
                     userId: currentUser.uid,
-                    tvId: `${id}_tv`,
+                    mediaId: `${id}_tv`,
+                    mediaType: 'tv',
                     title: tvShow.name,
-                    imageUrl: `https://image.tmdb.org/t/p/w500${tvShow.poster_path}`,
+                    imageUrl: tvShow.poster_path ? `https://image.tmdb.org/t/p/w500${tvShow.poster_path}` : null,
                     rating: tvShow.vote_average,
+                    createdAt: new Date(),
                 };
                 await setDoc(docRef, data);
                 setIsInWatchlist(true);
@@ -315,9 +318,9 @@ function TVDetail() {
         }
     };
 
-    const handleRateShow = async (rating) => { if (!currentUser) { alert("Please log in to rate shows."); return; } setUserRating(rating); try { const idToken = await currentUser.getIdToken(true); await fetch(`${API_BASE}/api/ratings/tv/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ rating }), }); } catch (error) { console.error("Rating submission error:", error); alert("Could not save your rating."); setUserRating(0); } };
-    const handleReviewSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Please log in to post a comment."); return; } if (comment.trim() === "") { alert("Comment cannot be empty."); return; } setIsSubmitting(true); try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/reviews/tv/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ comment }), }); if (!response.ok) throw new Error((await response.json()).error || "Failed to submit comment."); const newReview = await response.json(); setReviews(prevReviews => [newReview, ...prevReviews]); setComment(''); } catch (error) { console.error("Comment submission error:", error); alert(`Error: ${error.message}`); } finally { setIsSubmitting(false); } };
-    const handleDeleteReview = async (reviewId) => { if (!currentUser) { alert("You must be logged in to delete."); return; } if (!window.confirm("Are you sure you want to delete this comment?")) return; try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/reviews/${reviewId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }, }); if (!response.ok) throw new Error((await response.json()).error || "Failed to delete review."); setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId)); } catch (error) { console.error("Delete error:", error); alert(`Error: ${error.message}`); } };
+    const handleRateShow = async (rating) => { if (!currentUser) { alert("Please log in to rate shows."); return; } setUserRating(rating); try { const idToken = await currentUser.getIdToken(true); await fetch(`${API_BASE}/api/tv/${id}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ rating }), }); } catch (error) { console.error("Rating submission error:", error); alert("Could not save your rating."); setUserRating(0); } };
+    const handleReviewSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Please log in to post a comment."); return; } if (comment.trim() === "") { alert("Comment cannot be empty."); return; } setIsSubmitting(true); try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/tv/${id}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ comment }), }); if (!response.ok) throw new Error((await response.json()).error || "Failed to submit comment."); const newReview = await response.json(); setReviews(prevReviews => [newReview, ...prevReviews]); setComment(''); } catch (error) { console.error("Comment submission error:", error); alert(`Error: ${error.message}`); } finally { setIsSubmitting(false); } };
+    const handleDeleteReview = async (reviewId) => { if (!currentUser) { alert("You must be logged in to delete."); return; } if (!window.confirm("Are you sure you want to delete this comment?")) return; try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/review/${reviewId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }, }); if (!response.ok) throw new Error((await response.json()).error || "Failed to delete review."); setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId)); } catch (error) { console.error("Delete error:", error); alert(`Error: ${error.message}`); } };
 
     if (!tvShow) return <ShimmerDetail />;
 

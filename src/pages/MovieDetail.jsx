@@ -12,7 +12,8 @@ import ShimmerDetail from "../components/ShimmerDetail";
 import RatingCircle from "../components/RatingCircle";
 import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Play } from "lucide-react";
+// --- FIX: Import the Bookmark icon for the new UI ---
+import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Play, Bookmark } from "lucide-react";
 
 
 const formatRuntime = (mins) => {
@@ -178,12 +179,12 @@ function MovieDetail() {
 	  if (isInWatchlist) {
     try {
         const docSnap = await getDoc(docRef);
-        console.log("Doc exists?", docSnap.exists(), docSnap.data());
         if (docSnap.exists()) {
             await deleteDoc(docRef);
             setIsInWatchlist(false);
         } else {
-            console.warn("Document not found, cannot remove");
+            // This case might happen if there's a quick double-click, it's safe to just update state
+            setIsInWatchlist(false);
         }
     } catch (err) {
         console.error("Error removing from watchlist:", err);
@@ -277,7 +278,50 @@ function MovieDetail() {
 
     const handleRateMovie = async (rating) => { if (!currentUser) { alert("Please log in to rate movies."); return; } setUserRating(rating); try { const idToken = await currentUser.getIdToken(true); await fetch(`${API_BASE}/api/movie/${id}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ rating }), }); } catch (error) { console.error("Rating submission error:", error); alert("Could not save your rating."); setUserRating(0); } };
     const handleReviewSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Please log in to post a comment."); return; } if (comment.trim() === "") { alert("Comment cannot be empty."); return; } setIsSubmitting(true); try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/movie/${id}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ comment }), }); if (!response.ok) throw new Error((await response.json()).error || "Failed to submit comment."); const newReview = await response.json(); setReviews(prevReviews => [newReview, ...prevReviews]); setComment(''); } catch (error) { console.error("Comment submission error:", error); alert(`Error: ${error.message}`); } finally { setIsSubmitting(false); } };
-    const handleDeleteReview = async (reviewId) => { if (!currentUser) { alert("You must be logged in to delete."); return; } if (!window.confirm("Are you sure you want to delete this comment?")) return; try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/review/${reviewId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }, }); if (!response.ok) throw new Error((await response.json()).error || "Failed to delete review."); setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId)); } catch (error) { console.error("Delete error:", error); alert(`Error: ${error.message}`); } };
+const handleDeleteReview = async (reviewId) => {
+    if (!currentUser) {
+        alert("You must be logged in to delete.");
+        return;
+    }
+    if (!window.confirm("Are you sure you want to delete this comment?")) {
+        return;
+    }
+
+    console.log(`[DEBUG] Attempting to delete review with ID: ${reviewId}`);
+
+    try {
+        const idToken = await currentUser.getIdToken(true);
+        const url = `${API_BASE}/api/review/${reviewId}`;
+        
+        console.log(`[DEBUG] Sending DELETE request to: ${url}`);
+
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+            },
+        });
+
+        console.log('[DEBUG] Response received from server:', response);
+        console.log(`[DEBUG] Response status: ${response.status} (${response.statusText})`);
+        console.log(`[DEBUG] Response ok: ${response.ok}`);
+
+        if (!response.ok) {
+            // Let's find out what the server actually sent back. It might not be JSON.
+            const errorText = await response.text();
+            console.error('[DEBUG] Server returned an error response body:', errorText);
+            throw new Error(errorText || "Failed to delete review.");
+        }
+
+        console.log('[DEBUG] Deletion successful. Updating UI.');
+        setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId));
+
+    } catch (error) {
+        // Now this catch block WILL trigger if anything goes wrong.
+        console.error("Delete error:", error);
+        alert(`Error: ${error.message}`);
+    }
+};
 
     if (!movie) return <ShimmerDetail />;
 
@@ -301,13 +345,19 @@ function MovieDetail() {
                                 <span>{movie.release_date?.slice(0, 4)}</span>
                                 {movie.runtime > 0 && <span>• {formatRuntime(movie.runtime)}</span>}
                                 <div className="flex flex-wrap gap-2">{movie.genres?.slice(0, 3).map(g => (<Link to={`/genres?genre=${g.name}`} key={g.id} className="text-xs font-semibold bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/20 transition-colors">{g.name}</Link>))}</div>
+                                {/* --- FIX: Replaced the old button with a new, better styled one --- */}
                                 <button
-    onClick={toggleWatchlist}
-    className="px-4 py-2 bg-indigo-600 text-white rounded-md mt-4"
->
-    {isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-</button>
-
+                                    onClick={toggleWatchlist}
+                                    disabled={!currentUser}
+                                    className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 ease-in-out backdrop-blur-sm ${
+                                        isInWatchlist 
+                                        ? 'bg-[var(--dominant-color)] text-white' 
+                                        : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    <Bookmark size={16} className={isInWatchlist ? 'fill-current' : ''} />
+                                    {isInWatchlist ? "In Watchlist" : "Add to Watchlist"}
+                                </button>
                             </motion.div>
                         </div>
                     </div>
