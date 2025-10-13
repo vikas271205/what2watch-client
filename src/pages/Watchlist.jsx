@@ -1,19 +1,37 @@
+// src/pages/Watchlist.jsx
+
 import { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import MovieCard from "../components/MovieCard";
 import { useLoading } from "../context/LoadingContext";
 import { motion } from "framer-motion";
+import { onAuthStateChanged } from "firebase/auth"; // <-- Import the listener
 
 function Watchlist() {
   const [watchlist, setWatchlist] = useState([]);
   const { setIsLoading } = useLoading();
-  const user = auth.currentUser;
+  
+  // FIX 1: Use component state to manage the user, don't use the static auth.currentUser
+  const [user, setUser] = useState(auth.currentUser);
 
+  // FIX 2: Add an effect to listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    // Cleanup the listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
+
+
+  // FIX 3: This effect will now correctly run whenever the `user` state changes from null to a user object
   useEffect(() => {
     const fetchWatchlist = async () => {
+      // The check is now against the reliable state variable
       if (!user) {
         setWatchlist([]);
+        setIsLoading(false); // Make sure to turn off loading if the user is logged out
         return;
       }
 
@@ -22,11 +40,12 @@ function Watchlist() {
         const q = query(collection(db, "watchlists"), where("userId", "==", user.uid));
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map((doc) => ({
-          id: doc.data().movieId || doc.data().tvId?.replace("_tv", ""),
+          id: doc.data().movieId || doc.data().mediaId?.replace("_movie", "").replace("_tv", ""), // More robust ID parsing
+          docId: doc.id, // Keep the full doc ID for deletion
           title: doc.data().title,
           imageUrl: doc.data().imageUrl,
           rating: doc.data().rating,
-          isTV: !!doc.data().tvId,
+          isTV: doc.data().mediaType === 'tv',
         }));
         setWatchlist(data);
       } catch (e) {
@@ -37,13 +56,14 @@ function Watchlist() {
     };
 
     fetchWatchlist();
-  }, [user, setIsLoading]);
+  }, [user, setIsLoading]); // This dependency array is now correct
 
-  const removeFromWatchlist = async (id, isTV) => {
+  const removeFromWatchlist = async (docId, id, isTV) => {
+    if (!user) return;
     try {
-      const docId = isTV ? `${user.uid}_${id}_tv` : `${user.uid}_${id}`;
+      // Use the full document ID for reliable deletion
       await deleteDoc(doc(db, "watchlists", docId));
-      setWatchlist((prev) => prev.filter((item) => item.id !== id || item.isTV !== isTV));
+      setWatchlist((prev) => prev.filter((item) => item.docId !== docId));
     } catch (e) {
       console.error("Failed to remove from watchlist", e);
     }
@@ -90,7 +110,7 @@ return (
         transition={{ duration: 0.5 }}
       >
         {watchlist.map((item) => (
-          <div key={`${item.id}_${item.isTV}`} className="relative">
+          <div key={item.docId} className="relative group">
             <MovieCard
               id={item.id}
               title={item.title}
@@ -101,8 +121,8 @@ return (
               language={null}
             />
             <motion.button
-              onClick={() => removeFromWatchlist(item.id, item.isTV)}
-              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-sm sm:text-base shadow-md"
+              onClick={() => removeFromWatchlist(item.docId, item.id, item.isTV)}
+              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-sm sm:text-base shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               aria-label={`Remove ${item.title} from watchlist`}

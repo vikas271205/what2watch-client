@@ -1,7 +1,8 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// --- FIX: Import the connectFirestoreEmulator function ---
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_FgSWwflp7Y7EjsWxkiwS3wRYNYVxcZc",
@@ -15,5 +16,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider(); // <-- ADD THIS
+export const provider = new GoogleAuthProvider();
 export const db = getFirestore(app);
+
+// --- ADDED: This block connects your app to the local emulator ---
+// It only runs when your app's hostname is "localhost".
+/*if (window.location.hostname === "localhost") {
+  console.log("Connecting to local Firestore emulator on localhost:8080...");
+  connectFirestoreEmulator(db, 'localhost', 8080);
+}*/
+// --------------------------------------------------------------------
