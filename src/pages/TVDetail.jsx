@@ -328,7 +328,8 @@ function TVDetail() {
             id: tvShow.id,
             type: "tv",
             title: tvShow.name,
-            poster_path: tvShow.poster_path
+            poster_path: tvShow.poster_path,
+            genres: tvShow.genres?.map(g => g.name) || []
         });
     }, [tvShow]);
     if (!tvShow) return <ShimmerDetail />;

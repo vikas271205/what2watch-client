@@ -8,7 +8,7 @@ export default function ContinueWatchingSection({ maxItems = 6 }) {
   const navigate = useNavigate();
 
   const items = getWatchHistory().slice(0, maxItems);
-
+  console.log("[WATCH HISTORY] ContinueWatchingSection items:", items);
   if (items.length === 0) return null;
 
   return (
