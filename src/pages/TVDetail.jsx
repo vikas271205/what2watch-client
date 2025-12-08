@@ -13,7 +13,7 @@ import RatingCircle from "../components/RatingCircle";
 import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark, Play } from "lucide-react";
-
+import { addToWatchHistory } from "../utils/watchHistory";
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -321,7 +321,16 @@ function TVDetail() {
     const handleRateShow = async (rating) => { if (!currentUser) { alert("Please log in to rate shows."); return; } setUserRating(rating); try { const idToken = await currentUser.getIdToken(true); await fetch(`${API_BASE}/api/tv/${id}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ rating }), }); } catch (error) { console.error("Rating submission error:", error); alert("Could not save your rating."); setUserRating(0); } };
     const handleReviewSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Please log in to post a comment."); return; } if (comment.trim() === "") { alert("Comment cannot be empty."); return; } setIsSubmitting(true); try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/tv/${id}/review`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ comment }), }); if (!response.ok) throw new Error((await response.json()).error || "Failed to submit comment."); const newReview = await response.json(); setReviews(prevReviews => [newReview, ...prevReviews]); setComment(''); } catch (error) { console.error("Comment submission error:", error); alert(`Error: ${error.message}`); } finally { setIsSubmitting(false); } };
     const handleDeleteReview = async (reviewId) => { if (!currentUser) { alert("You must be logged in to delete."); return; } if (!window.confirm("Are you sure you want to delete this comment?")) return; try { const idToken = await currentUser.getIdToken(true); const response = await fetch(`${API_BASE}/api/review/${reviewId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }, }); if (!response.ok) throw new Error((await response.json()).error || "Failed to delete review."); setReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId)); } catch (error) { console.error("Delete error:", error); alert(`Error: ${error.message}`); } };
+    useEffect(() => {
+        if (!tvShow) return;
 
+        addToWatchHistory({
+            id: tvShow.id,
+            type: "tv",
+            title: tvShow.name,
+            poster_path: tvShow.poster_path
+        });
+    }, [tvShow]);
     if (!tvShow) return <ShimmerDetail />;
 
     const rtScore = omdbRatings.rt ? parseInt(omdbRatings.rt.replace('%', '')) : null;

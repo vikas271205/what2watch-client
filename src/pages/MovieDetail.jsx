@@ -14,6 +14,7 @@ import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
 // --- FIX: Import the Bookmark icon for the new UI ---
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Play, Bookmark } from "lucide-react";
+import { addToWatchHistory } from "../utils/watchHistory";
 
 
 const formatRuntime = (mins) => {
@@ -103,6 +104,7 @@ const WatchOnSection = ({ sources }) => {
 };
 
 function MovieDetail() {
+    
     const { id } = useParams();
     const [movie, setMovie] = useState(null);
     const [theHook, setTheHook] = useState("");
@@ -323,7 +325,24 @@ const handleDeleteReview = async (reviewId) => {
     }
 };
 
+    // ADD THIS EXACT BLOCK
+    useEffect(() => {
+        if (!movie){ 
+            console.log("[WATCH HISTORY] MovieDetail: movie not loaded yet");
+            return;
+        }
+        console.log("[WATCH HISTORY] MovieDetail effect triggered with movie:", movie);
+        addToWatchHistory({
+         id: movie.id,
+         type: "movie",
+         title: movie.title,
+         poster_path: movie.poster_path
+        });
+    }, [movie]);
+
+
     if (!movie) return <ShimmerDetail />;
+
 
     const rtScore = omdbRatings.rt ? parseInt(omdbRatings.rt.replace('%', '')) : null;
 
