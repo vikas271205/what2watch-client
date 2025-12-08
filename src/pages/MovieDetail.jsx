@@ -328,15 +328,15 @@ const handleDeleteReview = async (reviewId) => {
     // ADD THIS EXACT BLOCK
     useEffect(() => {
         if (!movie){ 
-            console.log("[WATCH HISTORY] MovieDetail: movie not loaded yet");
+            
             return;
         }
-        console.log("[WATCH HISTORY] MovieDetail effect triggered with movie:", movie);
         addToWatchHistory({
          id: movie.id,
          type: "movie",
          title: movie.title,
-         poster_path: movie.poster_path
+         poster_path: movie.poster_path,
+         genres: movie.genres?.map(g => g.name) || []
         });
     }, [movie]);
 

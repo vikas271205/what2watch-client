@@ -5,6 +5,7 @@ import HollywoodSection from "../components/HollywoodSection";
 import BollywoodSection from "../components/BollywoodSection";
 import Hero from "../components/Hero";
 import ContinueWatchingSection from "../components/ContinueWatchingSection";
+import MoviesForYouSection from "../components/MoviesForYouSection";
 
 function Home() {
   return (
@@ -15,7 +16,8 @@ function Home() {
         <div className="space-y-12 sm:space-y-16">
           <ContinueWatchingSection/>
           <TrendingSection />
-          <TVSection />          
+          <TVSection />    
+          <MoviesForYouSection/>      
           <HollywoodSection />
           <BollywoodSection />
         </div>
