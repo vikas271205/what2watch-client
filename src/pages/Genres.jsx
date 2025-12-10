@@ -166,15 +166,18 @@ function Genres() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {movies.map((movie) => (
-                <MovieCard
-                  key={movie.id}
-                  id={movie.id}
-                  title={movie.title}
-                  imageUrl={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
-                  tmdbRating={movie.tmdbRating}
-                  genres={movie.genres}
-                  language={movie.language}
-                />
+<MovieCard
+  key={movie.id}
+  id={movie.id}
+  title={movie.title}
+  imageUrl={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
+  tmdbRating={movie.tmdbRating}
+  genres={movie.genres}
+  language={movie.language}
+  uncleScore={null}        // prevents wrong SKIP badge
+  uncleBadge={null}        // prevents MovieCard from displaying badge at all
+/>
+
               ))}
             </div>
           )}

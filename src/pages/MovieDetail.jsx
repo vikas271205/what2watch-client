@@ -15,7 +15,13 @@ import { motion, AnimatePresence } from "framer-motion";
 // --- FIX: Import the Bookmark icon for the new UI ---
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Play, Bookmark } from "lucide-react";
 import { addToWatchHistory } from "../utils/watchHistory";
-
+import MovieInfoPanel from "../components/MovieInfoPanel";
+import {
+    formatWorthItScore,
+    getWorthItColor,
+    getWorthItBadge
+} from "../utils/worthItDisplay";
+import { calculateUncleScore } from "../utils/uncleScore";
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -103,16 +109,68 @@ const WatchOnSection = ({ sources }) => {
     );
 };
 
+const ratingMap = {
+    "G": "Suitable for all ages",
+    "PG": "Ages 10+ ",
+    "PG-13": "Ages 13+ ",
+    "R": "Ages 17+ ",
+    "NC-17": "Adults Only (18+)",
+
+    // TV ratings
+    "TV-Y": "Suitable for all children",
+    "TV-Y7": "Suitable for children 7+",
+    "TV-G": "Suitable for all ages",
+    "TV-PG": "Ages 10+ ",
+    "TV-14": "Ages 14+",
+    "TV-MA": "Adults Only (18+)"
+};
+
+const getHeuristicRating = (genres = []) => {
+    const names = genres.map(g => g.name.toLowerCase());
+
+    if (names.includes("horror")) return "Ages 16+ ";
+    if (names.includes("crime")) return "Ages 14+";
+    if (names.includes("thriller")) return "Ages 14+";
+    if (names.includes("action")) return "Ages 13+";
+    if (names.includes("romance")) return "Ages 13+";
+    if (names.includes("animation")) return "Suitable for all ages";
+    if (names.includes("family")) return "Suitable for all ages";
+
+    return null;
+};
+const WorthItBadgeFloating = ({ badge }) => {
+    if (!badge) return null;
+
+    const colors = {
+        "Must Watch": { bg: "bg-green-600", text: "text-white" },
+        "Worth Watching": { bg: "bg-blue-600", text: "text-white" },
+        "Mixed": { bg: "bg-yellow-500", text: "text-black" },
+        "Skip": { bg: "bg-red-600", text: "text-white" },
+    };
+
+    const style = colors[badge] || { bg: "bg-gray-600", text: "text-white" };
+
+    return (
+        <div
+            className={`absolute top-6 right-6 z-30 px-4 py-1.5 rounded-full font-bold text-sm shadow-lg ${style.bg} ${style.text}`}
+        >
+            {badge}
+        </div>
+    );
+};
+
+
 function MovieDetail() {
     
     const { id } = useParams();
     const [movie, setMovie] = useState(null);
-    const [theHook, setTheHook] = useState("");
     const [trailerKey, setTrailerKey] = useState(null);
     const [cast, setCast] = useState([]);
+    const [crew, setCrew] = useState({});
     const [relatedMovies, setRelatedMovies] = useState([]);
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
+    const [ageRating, setAgeRating] = useState(null);
     const [userRating, setUserRating] = useState(0);
     const [comment, setComment] = useState("");
     const [reviews, setReviews] = useState([]);
@@ -121,7 +179,8 @@ function MovieDetail() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [currentUser, setCurrentUser] = useState(auth.currentUser);
     const [isInWatchlist, setIsInWatchlist] = useState(false);
-
+    const [aiSummary, setAiSummary] = useState("");
+    
     const posterUrl = movie?.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null;
     const { data: dominantColor } = useColor(posterUrl, 'hex', { crossOrigin: 'anonymous', quality: 10 });
 
@@ -153,6 +212,44 @@ function MovieDetail() {
 	    fetchWatchlistStatus();
 	}, [currentUser, movie]);
 	
+    const CrewSection = ({ title, people }) => {
+        if (!people || people.length === 0) return null;
+
+        return (
+            <div className="mb-6">
+                <h3 className="text-xl font-bold mb-3">{title}</h3>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {people.map(person => (
+                        <Link
+                            key={person.id}
+                            to={`/person/${person.id}`}
+                            className="text-center group"
+                        >
+                            <div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105">
+                                <img
+                                    src={
+                                        person.profile_path
+                                            ? `https://image.tmdb.org/t/p/w342${person.profile_path}`
+                                            : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"
+                                    }
+                                    alt={person.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+
+                            <p className="text-sm font-bold truncate">{person.name}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                                {person.job}
+                            </p>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+
 	const toggleWatchlist = async () => {
 	    if (!currentUser) {
 		alert("Please log in to manage your watchlist.");
@@ -220,25 +317,111 @@ function MovieDetail() {
                     if (Array.isArray(reviewsData)) { setReviews(reviewsData); }
                 }
 
-                const [aiData, omdbData, trailerData, castData, similarData] = await Promise.all([
-                    fetch(`${API_BASE}/api/ai/rewrite-overview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: movieData.title, overview: movieData.overview, tmdbId: movieData.id }) }).then(res => res.json()),
+                // Fetch all NON-AI data together
+                const [omdbData, trailerData, castData, similarData] = await Promise.all([
                     fetch(`${API_BASE}/api/omdb?title=${encodeURIComponent(movieData.title)}&year=${movieData.release_date?.slice(0, 4)}`).then(res => res.json()),
                     fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`).then(res => res.json()),
                     fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`).then(res => res.json()),
                     fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`).then(res => res.json()),
                 ]);
 
-                if (aiData.rewritten) setTheHook(aiData.rewritten.trim());
-                if (omdbData && !omdbData.error && omdbData.Ratings) {
-                    const imdbRating = omdbData.Ratings.find(r => r.Source === "Internet Movie Database")?.Value.split('/')[0] || null;
-                    const rtRating = omdbData.Ratings.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
-                    let uncleScore = movieData.vote_average ? parseFloat(movieData.vote_average.toFixed(1)) : null;
-                    if (uncleScore && imdbRating) { uncleScore = ((uncleScore + parseFloat(imdbRating)) / 2).toFixed(1); }
-                    setOmdbRatings({ imdb: imdbRating, rt: rtRating, uncle: uncleScore });
+                // Fetch NEW multi-style AI synopsis
+                const aiRes = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: movieData.title,
+                        overview: movieData.overview,
+                        genre: movieData.genres?.map(g => g.name).join(", "),
+                        tmdbId: movieData.id,
+                        type: "movie",
+                    }),
+                });
+
+                const aiData = await aiRes.json();
+
+                // For the Details tab (single summary)
+                if (aiData.standard) {
+                    setAiSummary(aiData.standard.trim());
+                } else if (aiData.rewritten) {
+                    setAiSummary(aiData.rewritten.trim());
                 }
+
+
+
+                
+// --- COMMUNITY RATINGS (Unified, same as TVDetail) ---
+if (omdbData && !omdbData.error && omdbData.Ratings) {
+    const imdbRating = omdbData.Ratings.find(r =>
+        r.Source === "Internet Movie Database"
+    )?.Value?.split("/")[0] || null;
+
+    const rtRating = omdbData.Ratings.find(r =>
+        r.Source === "Rotten Tomatoes"
+    )?.Value || null;
+
+    // GET WORTH-IT SCORE (same unified logic)
+    const worth = await calculateUncleScore(
+        movieData.title,
+        movieData.overview,
+        movieData.id,
+        movieData.vote_average,
+        imdbRating,
+        rtRating,
+        movieData.popularity,
+        movieData.genres?.map(g => g.name),
+        "movie"
+    );
+
+    setOmdbRatings({
+        imdb: imdbRating,
+        rt: rtRating,
+        uncle: worth.score,
+        badge: worth.badge
+    });
+
+    // AGE RATING SECTION (unchanged)
+    let finalRating = null;
+    if (omdbData?.Rated && omdbData.Rated !== "N/A") {
+        finalRating = ratingMap[omdbData.Rated] || omdbData.Rated;
+    }
+    if (!finalRating) {
+        const certRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/release_dates`);
+        const certData = await certRes.json();
+        const usRelease = certData?.results?.find(c => c.iso_3166_1 === "US");
+        const usCert = usRelease?.release_dates?.find(r => r.certification)?.certification;
+        if (usCert) finalRating = ratingMap[usCert] || usCert;
+    }
+    if (!finalRating) finalRating = getHeuristicRating(movieData.genres);
+    if (!finalRating) finalRating = "Rating Not Available";
+    setAgeRating(finalRating);
+}
+
                 const trailer = trailerData.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
                 setTrailerKey(trailer?.key || null);
                 setCast(castData.cast?.slice(0, 18) || []);
+                // --- CREW CATEGORIES ---
+                const directors = castData.crew?.filter(p => p.job === "Director") || [];
+                const writers = castData.crew?.filter(p =>
+                    ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
+                ) || [];
+                const producers = castData.crew?.filter(p =>
+                    ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
+                ) || [];
+                const music = castData.crew?.filter(p => p.job === "Original Music Composer") || [];
+                const cinematography = castData.crew?.filter(p => p.job === "Director of Photography") || [];
+                const editors = castData.crew?.filter(p => p.job === "Editor") || [];
+
+                // Save inside state
+                setCrew({
+                    directors,
+                    writers,
+                    producers,
+                    music,
+                    cinematography,
+                    editors,
+                });
+
                 setRelatedMovies(similarData.results?.slice(0, 12) || []);
 
                 const releaseYear = movieData.release_date?.slice(0, 4);
@@ -349,6 +532,8 @@ const handleDeleteReview = async (reviewId) => {
     return (
         <div className="bg-gray-900 text-gray-100" style={{ '--dominant-color': dominantColor || '#4f46e5' }}>
             <div className="relative">
+                <WorthItBadgeFloating badge={omdbRatings.badge} />
+
                 <div className="absolute inset-0 h-[55vh] overflow-hidden">
                     <div className="w-full h-full bg-cover bg-top bg-no-repeat" style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
@@ -360,8 +545,27 @@ const handleDeleteReview = async (reviewId) => {
                         </motion.div>
                         <div className="flex flex-col justify-end flex-1 pb-4">
                             <motion.h1 className="text-4xl md:text-6xl font-black tracking-tighter" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}>{movie.title}</motion.h1>
+
+
+                            {movie.tagline && movie.tagline.trim().length > 0 && (
+                                <motion.p
+                                    className="text-lg md:text-2xl italic text-gray-300 mt-2"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0, transition: { delay: 0.25 } }}
+                                >
+                                    "{movie.tagline}"
+                                </motion.p>
+                            )}
+
                             <motion.div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}>
                                 <span>{movie.release_date?.slice(0, 4)}</span>
+                                {ageRating && (
+                                    <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-white/10 border border-white/20">
+                                    {ageRating}
+                                    </span>
+                                )}
+
+
                                 {movie.runtime > 0 && <span>• {formatRuntime(movie.runtime)}</span>}
                                 <div className="flex flex-wrap gap-2">{movie.genres?.slice(0, 3).map(g => (<Link to={`/genres?genre=${g.name}`} key={g.id} className="text-xs font-semibold bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/20 transition-colors">{g.name}</Link>))}</div>
                                 {/* --- FIX: Replaced the old button with a new, better styled one --- */}
@@ -389,6 +593,9 @@ const handleDeleteReview = async (reviewId) => {
                                 <TabButton active={activeTab === 'cast'} onClick={() => setActiveTab('cast')}>Cast & Crew</TabButton>
                                 <TabButton active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>Comments</TabButton>
                                 <TabButton active={activeTab === 'related'} onClick={() => setActiveTab('related')}>Related</TabButton>
+                                                            
+                                                            
+
                             </nav>
                         </div>
                         <AnimatePresence mode="wait">
@@ -396,23 +603,110 @@ const handleDeleteReview = async (reviewId) => {
                                 {activeTab === 'synopsis' && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                         <div className="md:col-span-2">
-                                            <h3 className="text-2xl font-bold mb-4">Synopsis</h3>
-                                            {theHook && (<div className="mb-6 p-4 rounded-lg bg-gray-800 border-l-4 border-[var(--dominant-color)]"><p className="text-gray-300 italic">"{theHook}"</p></div>)}
-                                            <p className="text-gray-300 leading-relaxed whitespace-pre-line">{movie.overview}</p>
+                                            <h3 className="text-2xl font-bold mb-4">Why You Will Like This</h3>
+                                            <div className="space-y-4">
+
+
+                                                {/* AI GENERATED SUMMARY / HOOK */}
+                                                <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-[var(--dominant-color)]">
+                                                    <p className="text-gray-300 leading-relaxed whitespace-pre-line">
+                                                        {aiSummary}
+                                                    </p>
+                                                </div>
+
+                                            </div>
+
                                             {trailerKey && (<div className="mt-8"> <h3 className="text-2xl font-bold mb-4 text-white"><Film className="inline w-6 h-6 mr-2"/>Trailer</h3> <div className="aspect-video"><iframe src={`https://www.youtube.com/embed/${trailerKey}`} title="Trailer" className="w-full h-full rounded-lg" allowFullScreen/></div> </div>)}
                                         </div>
                                         <div className="space-y-6">
+                                            <div>
+    <h3 className="text-xl font-bold text-white mb-3">Community Ratings</h3>
+
+    <div className="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">
+        
+        {omdbRatings.uncle && (
+            <RatingCircle
+                score={parseFloat(omdbRatings.uncle)}
+                label="Uncle Score"
+                useAutoColor={true}
+            />
+        )}
+
+        {movie.vote_average > 0 && (
+            <RatingCircle
+                score={parseFloat(movie.vote_average.toFixed(1))}
+                label="TMDB"
+                useAutoColor={true}
+            />
+        )}
+
+        {omdbRatings.imdb && (
+            <RatingCircle
+                score={parseFloat(omdbRatings.imdb)}
+                label="IMDb"
+                useAutoColor={true}
+            />
+        )}
+
+        {rtScore && (
+            <RatingCircle
+                score={rtScore}
+                maxValue={100}
+                label="Rotten Tomatoes"
+                useAutoColor={true}
+            />
+        )}
+
+    </div>
+</div>
+
+                                            <MovieInfoPanel movie={movie} />
+
                                             <div><h3 className="text-xl font-bold text-white mb-3">Your Rating</h3><div className="bg-gray-800 p-4 rounded-lg"><InteractiveStarRating currentRating={userRating} onRate={handleRateMovie} disabled={!currentUser} />{!currentUser && <p className="text-xs text-gray-500 mt-2">Log in to rate this movie.</p>}</div></div>
-                                            <div><h3 className="text-xl font-bold text-white mb-3">Community Ratings</h3><div className="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">{omdbRatings.uncle && <RatingCircle score={omdbRatings.uncle} label="Uncle Score" color={dominantColor} />}{movie.vote_average > 0 && <RatingCircle score={movie.vote_average.toFixed(1)} label="TMDB" color="#eab308" />}{omdbRatings.imdb && <RatingCircle score={omdbRatings.imdb} label="IMDb" color="#f5c518" />}{rtScore && <RatingCircle score={rtScore} maxValue={100} label="Rotten Tomatoes" color="#ef4444" />}</div></div>
-                                        </div>
+                                         </div>
                                     </div>
                                 )}
                                 {activeTab === 'cast' && (
-                                     <div>
-                                        <h3 className="text-2xl font-bold mb-4 text-white">Top Billed Cast</h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">{cast.map(member => (<Link key={member.id} to={`/person/${member.id}`} className="text-center group"><div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105"><img src={member.profile_path ? `https://image.tmdb.org/t/p/w342${member.profile_path}` : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"} alt={member.name} className="w-full h-full object-cover" loading="lazy" /></div><p className="text-sm font-bold truncate">{member.name}</p><p className="text-xs text-gray-400 truncate">{member.character}</p></Link>))}</div>
+                                    <div className="space-y-10">
+
+                                        {/* CAST */}
+                                        <section>
+                                            <h3 className="text-2xl font-bold mb-4 text-white">Top Billed Cast</h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+                                                {cast.map(member => (
+                                                    <Link key={member.id} to={`/person/${member.id}`} className="text-center group">
+                                                        <div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105">
+                                                            <img
+                                                                src={
+                                                                    member.profile_path
+                                                                        ? `https://image.tmdb.org/t/p/w342${member.profile_path}`
+                                                                        : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"
+                                                                }
+                                                                alt={member.name}
+                                                                className="w-full h-full object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        </div>
+                                                        <p className="text-sm font-bold truncate">{member.name}</p>
+                                                        <p className="text-xs text-gray-400 truncate">
+                                                            {member.character}
+                                                        </p>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </section>
+
+                                        {/* CREW CATEGORIES */}
+                                        <CrewSection title="Directors" people={crew.directors} />
+                                        <CrewSection title="Writers" people={crew.writers} />
+                                        <CrewSection title="Producers" people={crew.producers} />
+                                        <CrewSection title="Music By" people={crew.music} />
+                                        <CrewSection title="Cinematography" people={crew.cinematography} />
+                                        <CrewSection title="Editors" people={crew.editors} />
+
                                     </div>
                                 )}
+
                                 {activeTab === 'reviews' && (
                                      <div>
                                         <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><MessageSquare className="w-6 h-6 text-[var(--dominant-color)]"/>Community Comments</h3>
@@ -431,6 +725,8 @@ const handleDeleteReview = async (reviewId) => {
                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">{relatedMovies.map(m => <MovieCard key={m.id} id={m.id} title={m.title} imageUrl={m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null} tmdbRating={m.vote_average?.toString()} />)}</div>
                                     </div>
                                 )}
+
+
                             </motion.div>
                         </AnimatePresence>
                     </div>

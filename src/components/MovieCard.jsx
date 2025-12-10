@@ -9,6 +9,11 @@ import { onAuthStateChanged } from "firebase/auth";
 import { calculateUncleScore } from "../utils/uncleScore";
 import API_BASE from "../utils/api";
 import ScoreCircle from "./ScoreCircle";
+import {
+  formatWorthItScore,
+  getWorthItColor,
+  getWorthItBadge
+} from "../utils/worthItDisplay";
 
 function MovieCard({
   id,
@@ -21,6 +26,7 @@ function MovieCard({
   imdbRating,
   rtRating,
   uncleScore,
+  uncleBadge,
   isSaved: initialIsSaved,
   year,
   isAdmin = false,
@@ -44,9 +50,21 @@ useEffect(() => {
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
 
-  const finalUncleScore = (uncleScore != null) 
-    ? uncleScore 
-    : calculateUncleScore(tmdbRating, imdbRating, rtRating);
+// 1) Prefer backend-provided worth-it score
+let base = uncleScore;
+
+// 2) If backend did NOT send it → fallback to TMDB
+if (base == null && tmdbRating != null) {
+  base = parseFloat(tmdbRating);
+}
+
+// 3) Format score (Option C)
+const finalScore = formatWorthItScore(base);
+
+// 4) UI color + badge (frontend-only)
+const finalColor = getWorthItColor(base);
+const finalBadge = uncleBadge ?? getWorthItBadge(base);
+
 
   const linkTo = type === "tv" || isTV ? `/tv/${id}` : `/movie/${id}`;
   
@@ -142,6 +160,10 @@ const toggleSave = async (e) => {
         alert("An error occurred while deleting.");
     }
   };
+  // Convert formatted score back to number for ScoreCircle
+const finalScoreNumber = (typeof base === "number" && !isNaN(base)) 
+  ? Number(base) 
+  : null;
 
   return (
     <Link
@@ -158,36 +180,62 @@ const toggleSave = async (e) => {
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        
-        <div className="absolute inset-0 flex flex-col justify-end p-3 text-white">
-          <h3 className="text-sm font-bold line-clamp-2 drop-shadow-lg mb-2">
-            {title}
-          </h3>
+    <div className="absolute inset-0 flex flex-col justify-end p-3 text-white">
 
-          <div className="flex gap-1.5 flex-wrap">
-            {year && (
-              <span className="text-xs font-semibold rounded-full px-2.5 py-1 bg-slate-200 text-slate-700 dark:bg-black/30 dark:text-slate-200">
-                {year}
-              </span>
-            )}
-            {genres.slice(0, 2).map((genre, i) => genre && (
-              <span key={`${genre}-${i}`} className="text-xs font-semibold rounded-full px-2.5 py-1 bg-slate-200 text-slate-700 dark:bg-black/30 dark:text-slate-200">
-                {genre}
-              </span>
-            ))}
-          </div>
-        </div>
+  {/* WORTH-IT BADGE ABOVE TITLE */}
+  {finalBadge && (
+    <div className="mb-1">
+      <span
+        className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+        style={{
+          backgroundColor: finalColor + "30",
+          color: finalColor,
+          border: `1px solid ${finalColor}50`,
+        }}
+      >
+        {finalBadge}
+      </span>
+    </div>
+  )}
+
+  {/* MOVIE TITLE */}
+  <h3 className="text-sm font-bold line-clamp-2 drop-shadow-lg">
+    {title}
+  </h3>
+
+  {/* YEAR (ALWAYS VISIBLE) */}
+  {year && (
+    <span className="text-xs font-semibold mt-1 bg-black/30 px-2 py-0.5 rounded-md w-fit">
+      {year}
+    </span>
+  )}
+
+  {/* GENRES */}
+  {/* <div className="flex gap-1.5 flex-wrap mt-1">
+    {genres.slice(0, 2).map((genre, i) => (
+      <span
+        key={`${genre}-${i}`}
+        className="text-xs font-semibold rounded-full px-2.5 py-1 bg-black/30 backdrop-blur-sm"
+      >
+        {genre}
+      </span>
+    ))}
+  </div> */}
+
+</div>
+
         
        {currentUser && (
           <button onClick={toggleSave} disabled={isLoading} aria-label={isSaved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`} className={`absolute top-2 right-2 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200 transform hover:scale-110 shadow-md ${isSaved ? "bg-green-500 hover:bg-green-400 text-white" : "bg-gray-800/60 hover:bg-gray-700/80 text-white backdrop-blur-sm"}`}>
             {isLoading ? '...' : (isSaved ? "✓" : "+")}
           </button>
         )}
-        {showUncleScore && finalUncleScore != null && (
-          <div className="absolute top-1 left-1 bg-black/50 rounded-full">
-             <ScoreCircle score={finalUncleScore} />
-          </div>
-        )}
+{showUncleScore && finalScore && (
+  <div className="absolute top-1 left-1 bg-black/50 rounded-full p-1">
+    <ScoreCircle score={finalScoreNumber} color={finalColor} />
+  </div>
+)}
+
         {location.pathname === "/unclespick" && isAdmin && onDelete && (
           <button onClick={handleAdminDelete} className="absolute top-12 right-2 p-1.5 rounded-full text-xs font-medium backdrop-blur-md bg-red-600/80 hover:bg-red-500/90 text-white">
             🗑️
