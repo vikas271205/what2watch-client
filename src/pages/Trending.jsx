@@ -64,19 +64,32 @@ function Trending() {
         }
         
         // We map from combinedData, which preserves the original API order
-        const finalContent = combinedData.filter(item => item.poster_path).map(item => ({
-          id: item.id,
-          title: item.title || item.name,
-          imageUrl: `https://image.tmdb.org/t/p/w300${item.poster_path}`,
-          tmdbRating: item.vote_average?.toString(),
-          imdbRating: item.imdbRating,
-          rtRating: item.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value,
-          language: item.original_language,
-          genres: (item.genre_ids || []).map(id => genreMap[id] || ""),
-          isTV: !!item.name,
-          year: item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4),
-          uncleScore: item.uncleScore,
-        }));
+const finalContent = combinedData
+  .filter(item => item.poster_path)
+  .map(item => {
+    // Ensure safe numeric score
+    const rawScore = item.uncleScore?.score;
+    const safeScore = Number(rawScore);
+    const finalScore = isNaN(safeScore) ? null : safeScore;
+
+    return {
+      id: item.id,
+      title: item.title || item.name,
+      imageUrl: `https://image.tmdb.org/t/p/w300${item.poster_path}`,
+      tmdbRating: item.vote_average?.toString(),
+      imdbRating: item.imdbRating,
+      rtRating: item.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value,
+      language: item.original_language,
+      genres: (item.genre_ids || []).map(id => genreMap[id] || ""),
+      isTV: !!item.name,
+      year: item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4),
+
+      // WORTH IT SYSTEM — SAFE ALWAYS
+      uncleScore: finalScore,
+      uncleBadge: item.uncleScore?.badge ?? null,
+    };
+  });
+
         
         setContent((prev) => [...prev, ...finalContent]);
         

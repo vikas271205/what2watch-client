@@ -14,6 +14,7 @@ import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark, Play } from "lucide-react";
 import { addToWatchHistory } from "../utils/watchHistory";
+import { calculateUncleScore } from "../utils/uncleScore";
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -23,6 +24,57 @@ const formatRuntime = (mins) => {
     if (hours > 0) result += `${hours}h`;
     if (remainingMins > 0) result += ` ${remainingMins}m`;
     return result.trim();
+};
+
+// --- Age Rating Mapping for TV ---
+const ratingMap = {
+    "G": "Suitable for all ages",
+    "PG": "Ages 10+ ",
+    "PG-13": "Ages 13+ ",
+    "R": "Ages 17+",
+    "NC-17": "Adults Only (18+)",
+
+    // TV ratings
+    "TV-Y": "Suitable for all ages",
+    "TV-Y7": "Ages 7+",
+    "TV-G": "Suitable for all ages",
+    "TV-PG": "Ages 10+ ",
+    "TV-14": "Ages 14+",
+    "TV-MA": "Adults Only (18+)"
+};
+
+const getHeuristicRating = (genres = []) => {
+    const names = genres.map(g => g.name.toLowerCase());
+
+    if (names.includes("horror")) return "Ages 16+ ";
+    if (names.includes("crime")) return "Ages 14+";
+    if (names.includes("thriller")) return "Ages 14+";
+    if (names.includes("action")) return "Ages 13+";
+    if (names.includes("romance")) return "Ages 13+";
+    if (names.includes("animation")) return "Suitable for all ages";
+    if (names.includes("family")) return "Suitable for all ages";
+
+    return null;
+};
+const WorthItBadgeFloating = ({ badge }) => {
+    if (!badge) return null;
+
+    const colors = {
+        "Must Watch": { bg: "bg-green-600", text: "text-white" },
+        "Worth Watching": { bg: "bg-blue-600", text: "text-white" },
+        "Mixed": { bg: "bg-yellow-500", text: "text-black" },
+        "Skip": { bg: "bg-red-600", text: "text-white" },
+    };
+
+    const style = colors[badge] || { bg: "bg-gray-600", text: "text-white" };
+
+    return (
+        <div
+            className={`absolute top-6 right-6 z-30 px-4 py-1.5 rounded-full font-bold text-sm shadow-lg ${style.bg} ${style.text}`}
+        >
+            {badge}
+        </div>
+    );
 };
 
 const InteractiveStarRating = ({ totalStars = 10, currentRating = 0, onRate, disabled }) => {
@@ -119,6 +171,11 @@ const EpisodeCard = ({ episode }) => {
     );
 };
 
+
+
+
+
+
 const SeasonsTab = ({ tvShow, selectedSeason, onSeasonChange, seasonDetails, isLoading }) => {
     const seasons = (tvShow?.seasons || []).filter(s => s.season_number > 0);
     return (
@@ -150,14 +207,17 @@ function TVDetail() {
     const { id } = useParams();
     const [tvShow, setTvShow] = useState(null);
     const [theHook, setTheHook] = useState("");
+    const [aiSummary, setAiSummary] = useState("");
     const [trailerKey, setTrailerKey] = useState(null);
     const [cast, setCast] = useState([]);
+    const [crew, setCrew] = useState({});
     const [related, setRelated] = useState([]);
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
     const [userRating, setUserRating] = useState(0);
     const [comment, setComment] = useState("");
     const [reviews, setReviews] = useState([]);
+    const [ageRating, setAgeRating] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState("synopsis");
     const [isAdmin, setIsAdmin] = useState(false);
@@ -166,9 +226,9 @@ function TVDetail() {
     const [seasonDetails, setSeasonDetails] = useState(null);
     const [isSeasonLoading, setIsSeasonLoading] = useState(false);
     const [isInWatchlist, setIsInWatchlist] = useState(false);
-
     const posterUrl = tvShow?.poster_path ? `https://image.tmdb.org/t/p/w200${tvShow.poster_path}` : null;
     const { data: dominantColor } = useColor(posterUrl, 'hex', { crossOrigin: 'anonymous', quality: 10 });
+
 
     useEffect(() => {
         const auth = getAuth();
@@ -188,56 +248,146 @@ function TVDetail() {
         setTvShow(null);
         window.scrollTo(0, 0);
 
-        const fetchAll = async () => {
+const fetchAll = async () => {
+    try {
+        // 1) TV + Reviews FIRST
+        const [tvRes, reviewsRes] = await Promise.all([
+            fetch(`${API_BASE}/api/tmdb/tv/${id}`),
+            fetch(`${API_BASE}/api/tv/${id}/reviews`)
+        ]);
+
+        const tvData = await tvRes.json();
+        setTvShow(tvData);
+
+        if (reviewsRes.ok) {
+            const reviewsData = await reviewsRes.json();
+            if (Array.isArray(reviewsData)) setReviews(reviewsData);
+        }
+
+        // 2) Fetch OMDB ONCE (needed for IMDb rating)
+        const omdbData = await fetch(
+            `${API_BASE}/api/omdb?title=${encodeURIComponent(tvData.name)}&year=${tvData.first_air_date?.slice(0, 4)}`
+        ).then(res => res.json());
+
+        // Extract IMDb rating safely
+        const imdbRating =
+            omdbData?.Ratings?.find(r => r.Source === "Internet Movie Database")?.Value?.split("/")[0] || null;
+
+        // 3) Now fetch everything else (AI + Worth-it + TMDB videos + credits + similar)
+        const [aiData, trailerData, castData, similarData] = await Promise.all([
+            // AI Overview
+            fetch(`${API_BASE}/api/ai/rewrite-overview`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: tvData.name,
+                    overview: tvData.overview,
+                    tmdbId: tvData.id,
+                    type: "tv"
+                })
+            }).then(res => res.json()),
+
+            fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`).then(res => res.json()),
+            fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`).then(res => res.json()),
+            fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`).then(res => res.json())
+        ]);
+        console.log("Similar Data Raw:", similarData);
+        console.log("Similar Results:", similarData?.results);
+
+
+        // 4) Apply AI Overview
+        if (aiData?.standard) setAiSummary(aiData.standard.trim());
+
+        // 5) Community ratings (reusing OMDB + TMDB rating)
+const rtRating =
+    omdbData?.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
+
+const worthIt = await calculateUncleScore(
+    tvData.name,
+    tvData.overview,
+    tvData.id,
+    tvData.vote_average,
+    imdbRating,
+    rtRating,
+    tvData.popularity,
+    tvData.genres?.map(g => g.name),
+    "tv"
+);
+
+// always set omdbRatings
+setOmdbRatings({
+    imdb: imdbRating,
+    rt: rtRating,
+    uncle: worthIt.score,
+    badge: worthIt.badge
+});
+
+
+        // 7) Age Rating logic (unchanged)
+        if (omdbData?.Rated && omdbData.Rated !== "N/A") {
+            setAgeRating(ratingMap[omdbData.Rated] || omdbData.Rated);
+        } else {
             try {
-                const [tvRes, reviewsRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/tmdb/tv/${id}`),
-                    fetch(`${API_BASE}/api/tv/${id}/reviews`)
-                ]);
-                
-                const tvData = await tvRes.json();
-                setTvShow(tvData);
+                const certRes = await fetch(`${API_BASE}/api/tmdb/tv/${id}`);
+                const certData = await certRes.json();
+                const usCert = certData?.content_ratings?.results?.find(r => r.iso_3166_1 === "US");
+                const inCert = certData?.content_ratings?.results?.find(r => r.iso_3166_1 === "IN");
+                const finalCert = usCert?.rating || inCert?.rating;
+                if (finalCert) setAgeRating(ratingMap[finalCert] || finalCert);
+                else setAgeRating(getHeuristicRating(tvData.genres));
+            } catch {}
+        }
 
-                if (reviewsRes.ok) {
-                    const reviewsData = await reviewsRes.json();
-                    if (Array.isArray(reviewsData)) { setReviews(reviewsData); }
-                }
+        // 8) Trailer
+        const trailer = trailerData.results?.find(
+            v => v.type === "Trailer" && v.site === "YouTube"
+        );
+        setTrailerKey(trailer?.key || null);
 
-                const [aiData, omdbData, trailerData, castData, similarData] = await Promise.all([
-                    fetch(`${API_BASE}/api/ai/rewrite-overview`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: tvData.name, overview: tvData.overview, tmdbId: tvData.id, type: "tv" }) }).then(res => res.json()),
-                    fetch(`${API_BASE}/api/omdb?title=${encodeURIComponent(tvData.name)}&year=${tvData.first_air_date?.slice(0, 4)}`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`).then(res => res.json()),
-                ]);
+        // 9) Cast + Crew
+        setCast(castData.cast?.slice(0, 18) || []);
 
-                if (aiData.rewritten) setTheHook(aiData.rewritten.trim());
-                if (omdbData && !omdbData.error && omdbData.Ratings) {
-                    const imdbRating = omdbData.Ratings.find(r => r.Source === "Internet Movie Database")?.Value.split('/')[0] || null;
-                    const rtRating = omdbData.Ratings.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
-                    let uncleScore = tvData.vote_average ? parseFloat(tvData.vote_average.toFixed(1)) : null;
-                    if (uncleScore && imdbRating) { uncleScore = ((uncleScore + parseFloat(imdbRating)) / 2).toFixed(1); }
-                    setOmdbRatings({ imdb: imdbRating, rt: rtRating, uncle: uncleScore });
-                }
-                const trailer = trailerData.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
-                setTrailerKey(trailer?.key || null);
-                setCast(castData.cast?.slice(0, 18) || []);
-                setRelated(similarData.results?.slice(0, 12) || []);
-                const releaseYear = tvData.first_air_date?.slice(0, 4);
-                const wmId = await getWatchmodeId(tvData.name, releaseYear, "tv");
-                if (wmId) {
-                    const sources = await getStreamingSources(wmId);
-                    const filtered = (sources || []).filter(src => src.type === "sub" || src.type === "free");
-                    if (filtered.length > 0) {
-                        setStreamingSources(filtered);
-                    } else {
-                        setStreamingSources([{ name: "Not available for streaming in your region", type: "note", web_url: null }]);
-                    }
-                } else {
-                    setStreamingSources([]);
-                }
-            } catch (err) { console.error("Failed to fetch TV show details:", err); }
-        };
+        setCrew({
+            directors: castData.crew?.filter(p => p.job === "Director") || [],
+            writers: castData.crew?.filter(p =>
+                ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
+            ) || [],
+            producers: castData.crew?.filter(p =>
+                ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
+            ) || [],
+            music: castData.crew?.filter(p => p.job === "Original Music Composer") || [],
+            cinematography: castData.crew?.filter(p => p.job === "Director of Photography") || [],
+            editors: castData.crew?.filter(p => p.job === "Editor") || []
+        });
+
+        // 10) Related shows
+        const relatedArray = Array.isArray(similarData)
+        ? similarData
+        : similarData?.results || [];
+
+        setRelated(relatedArray.slice(0, 12));
+
+
+        // 11) Streaming availability
+        const releaseYear = tvData.first_air_date?.slice(0, 4);
+        const wmId = await getWatchmodeId(tvData.name, releaseYear, "tv");
+
+        if (wmId) {
+            const sources = await getStreamingSources(wmId);
+            const filtered = sources?.filter(src => src.type === "sub" || src.type === "free");
+            setStreamingSources(
+                filtered?.length
+                    ? filtered
+                    : [{ name: "Not available in your region", type: "note" }]
+            );
+        } else {
+            setStreamingSources([]);
+        }
+    } catch (err) {
+        console.error("Failed to fetch TV show details:", err);
+    }
+};
+
         fetchAll();
     }, [id]);
 
@@ -332,13 +482,67 @@ function TVDetail() {
             genres: tvShow.genres?.map(g => g.name) || []
         });
     }, [tvShow]);
+    const CrewSection = ({ title, people }) => {
+        if (!people || people.length === 0) return null;
+
+        return (
+            <div className="mb-10">
+                <h3 className="text-xl font-bold mb-3">{title}</h3>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {people.map(person => (
+                        <Link
+                            key={person.id}
+                            to={`/person/${person.id}`}
+                            className="text-center group"
+                        >
+                            <div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105">
+                                <img
+                                    src={
+                                        person.profile_path
+                                            ? `https://image.tmdb.org/t/p/w342${person.profile_path}`
+                                            : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"
+                                    }
+                                    alt={person.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+
+                            <p className="text-sm font-bold truncate">{person.name}</p>
+                            <p className="text-xs text-gray-400 truncate">{person.job}</p>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+    const rtScore = omdbRatings.rt ? parseInt(omdbRatings.rt.replace('%', '')) : null;
+    const WorthItBadge = ({ badge }) => {
+        if (!badge) return null;
+
+        const colors = {
+            "Must Watch": "bg-green-600/20 text-green-400 border border-green-500/40",
+            "Worth Watching": "bg-blue-600/20 text-blue-400 border border-blue-500/40",
+            "Mixed": "bg-yellow-600/20 text-yellow-400 border border-yellow-500/40",
+            "Skip": "bg-red-600/20 text-red-400 border border-red-500/40"
+        };
+
+        return (
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${colors[badge] || "bg-gray-700 text-gray-300"}`}>
+                {badge}
+            </span>
+        );
+    };
+
+
     if (!tvShow) return <ShimmerDetail />;
 
-    const rtScore = omdbRatings.rt ? parseInt(omdbRatings.rt.replace('%', '')) : null;
-
+    
     return (
         <div className="bg-gray-900 text-gray-100" style={{ '--dominant-color': dominantColor || '#4f46e5' }}>
             <div className="relative">
+                <WorthItBadgeFloating badge={omdbRatings.badge} />
+
                 <div className="absolute inset-0 h-[55vh] overflow-hidden">
                     <div className="w-full h-full bg-cover bg-top bg-no-repeat" style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${tvShow.backdrop_path})` }}></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
@@ -349,12 +553,53 @@ function TVDetail() {
                             <img src={posterUrl ? posterUrl.replace('w200', 'w500') : "https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image"} alt={tvShow.name} className="w-full h-auto rounded-xl shadow-2xl shadow-black/60" />
                         </motion.div>
                         <div className="flex flex-col justify-end flex-1 pb-4">
-                            <motion.h1 className="text-4xl md:text-6xl font-black tracking-tighter" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}>{tvShow.name}</motion.h1>
-                            <motion.div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}>
-                                <span>{tvShow.first_air_date?.slice(0, 4)}</span>
-                                {tvShow.number_of_seasons && <span>• {tvShow.number_of_seasons} Season{tvShow.number_of_seasons > 1 ? 's' : ''}</span>}
-                                <div className="flex flex-wrap gap-2">{tvShow.genres?.slice(0, 3).map(g => (<Link to={`/tvshows?genre=${g.name}`} key={g.id} className="text-xs font-semibold bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/20 transition-colors">{g.name}</Link>))}</div>
+                            <motion.div
+                                className="flex flex-col md:flex-row md:items-center gap-3"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
+                            >
+                                <h1 className="text-4xl md:text-6xl font-black tracking-tighter">
+                                    {tvShow.name}
+                                </h1>
+
+
                             </motion.div>
+                                                        <motion.div 
+                                className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0, transition: { delay: 0.3 } }}
+                            >
+                                <span>{tvShow.first_air_date?.slice(0, 4)}</span>
+
+                                {ageRating && (
+                                    <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-white/10 border border-white/20">
+                                        {ageRating}
+                                    </span>
+                                )}
+
+                                {tvShow.tagline && (
+                                    <p className="italic text-gray-300 w-full text-sm md:text-base">
+                                        "{tvShow.tagline}"
+                                    </p>
+                                )}
+
+                                {tvShow.number_of_seasons && (
+                                    <span>• {tvShow.number_of_seasons} Season{tvShow.number_of_seasons > 1 ? "s" : ""}</span>
+                                )}
+
+                                <div className="flex flex-wrap gap-2">
+                                    {tvShow.genres?.slice(0, 3).map(g => (
+                                        <Link
+                                            to={`/tvshows?genre=${g.name}`}
+                                            key={g.id}
+                                            className="text-xs font-semibold bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/20 transition-colors"
+                                        >
+                                            {g.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </motion.div>
+
                             <motion.div className="mt-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.4 } }}>
                                 <button
                                     onClick={toggleWatchlist}
@@ -383,26 +628,166 @@ function TVDetail() {
                                 {activeTab === 'synopsis' && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                         <div className="md:col-span-2">
-                                            <h3 className="text-2xl font-bold mb-4">Synopsis</h3>
+                                            <h3 className="text-2xl font-bold mb-4">Why You Will Like This</h3>
                                             {theHook && (<div className="mb-6 p-4 rounded-lg bg-gray-800 border-l-4 border-[var(--dominant-color)]"><p className="text-gray-300 italic">"{theHook}"</p></div>)}
-                                            <p className="text-gray-300 leading-relaxed whitespace-pre-line">{tvShow.overview}</p>
+                                            {/* AI Summary */}
+ 
+
+                                            <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-[var(--dominant-color)] mb-8">
+                                                <p className="text-gray-300 leading-relaxed whitespace-pre-line">
+                                                    {aiSummary || tvShow.overview}
+                                                </p>
+                                            </div>
+
                                             {trailerKey && (<div className="mt-8"> <h3 className="text-2xl font-bold mb-4 text-white"><Film className="inline w-6 h-6 mr-2"/>Trailer</h3> <div className="aspect-video"><iframe src={`https://www.youtube.com/embed/${trailerKey}`} title="Trailer" className="w-full h-full rounded-lg" allowFullScreen/></div> </div>)}
                                         </div>
                                         <div className="space-y-6">
+
+
+
+
+
+<div className="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">
+
+    {omdbRatings.uncle && (
+        <RatingCircle
+            score={parseFloat(omdbRatings.uncle)}
+            label="Uncle Score"
+            useAutoColor={true}
+        />
+    )}
+
+    {tvShow.vote_average > 0 && (
+        <RatingCircle
+            score={parseFloat(tvShow.vote_average.toFixed(1))}
+            label="TMDB"
+            useAutoColor={true}
+        />
+    )}
+
+    {omdbRatings.imdb && (
+        <RatingCircle
+            score={parseFloat(omdbRatings.imdb)}
+            label="IMDb"
+            useAutoColor={true}
+        />
+    )}
+
+    {rtScore && (
+        <RatingCircle
+            score={rtScore}
+            maxValue={100}
+            label="Rotten Tomatoes"
+            useAutoColor={true}
+        />
+    )}
+
+</div>
+
+                                            <div className="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700/50">
+                                                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                                                    <Tv className="w-5 h-5 text-[var(--dominant-color)]" />
+                                                    Show Information
+                                                </h3>
+
+                                                <div className="space-y-4 text-sm text-gray-300">
+
+                                                    <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                        <span className="text-gray-400">Status</span>
+                                                        <span className="font-semibold text-white">{tvShow.status}</span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                        <span className="text-gray-400">First Air Date</span>
+                                                        <span className="font-semibold text-white">{tvShow.first_air_date}</span>
+                                                    </div>
+
+                                                    {tvShow.last_air_date && (
+                                                        <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                            <span className="text-gray-400">Last Air Date</span>
+                                                            <span className="font-semibold text-white">{tvShow.last_air_date}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                        <span className="text-gray-400">Total Episodes</span>
+                                                        <span className="font-semibold text-white">{tvShow.number_of_episodes}</span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                        <span className="text-gray-400">Seasons</span>
+                                                        <span className="font-semibold text-white">{tvShow.number_of_seasons}</span>
+                                                    </div>
+
+                                                    {tvShow.spoken_languages?.length > 0 && (
+                                                        <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                                                            <span className="text-gray-400">Languages</span>
+                                                            <span className="font-semibold text-white">
+                                                                {tvShow.spoken_languages.map(l => l.english_name).join(", ")}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {tvShow.production_companies?.length > 0 && (
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-gray-400">Studios</span>
+                                                            <span className="font-semibold text-white text-right">
+                                                                {tvShow.production_companies.map(c => c.name).join(", ")}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                </div>
+                                            </div>
+
+
                                             <div><h3 className="text-xl font-bold text-white mb-3">Your Rating</h3><div className="bg-gray-800 p-4 rounded-lg"><InteractiveStarRating currentRating={userRating} onRate={handleRateShow} disabled={!currentUser} />{!currentUser && <p className="text-xs text-gray-500 mt-2">Log in to rate this show.</p>}</div></div>
-                                            <div><h3 className="text-xl font-bold text-white mb-3">Community Ratings</h3><div className="grid grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">{omdbRatings.uncle && <RatingCircle score={omdbRatings.uncle} label="Uncle Score" color={dominantColor} />}{tvShow.vote_average > 0 && <RatingCircle score={tvShow.vote_average.toFixed(1)} label="TMDB" color="#eab308" />}{omdbRatings.imdb && <RatingCircle score={omdbRatings.imdb} label="IMDb" color="#f5c518" />}{rtScore && <RatingCircle score={rtScore} maxValue={100} label="Rotten Tomatoes" color="#ef4444" />}</div></div>
-                                        </div>
+                                                                                    </div>
                                     </div>
                                 )}
                                 {activeTab === 'seasons' && (
                                     <SeasonsTab tvShow={tvShow} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} seasonDetails={seasonDetails} isLoading={isSeasonLoading} />
                                 )}
                                 {activeTab === 'cast' && (
-                                     <div>
-                                        <h3 className="text-2xl font-bold mb-4 text-white">Top Billed Cast</h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">{cast.map(member => (<Link key={member.id} to={`/person/${member.id}`} className="text-center group"><div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105"><img src={member.profile_path ? `https://image.tmdb.org/t/p/w342${member.profile_path}` : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"} alt={member.name} className="w-full h-full object-cover" loading="lazy" /></div><p className="text-sm font-bold truncate">{member.name}</p><p className="text-xs text-gray-400 truncate">{member.character}</p></Link>))}</div>
+                                    <div className="space-y-10">
+
+                                        {/* CAST */}
+                                        <section>
+                                            <h3 className="text-2xl font-bold mb-4 text-white">Top Billed Cast</h3>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+                                                {cast.map(member => (
+                                                    <Link key={member.id} to={`/person/${member.id}`} className="text-center group">
+                                                        <div className="w-full aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 mb-2 transition-transform duration-300 group-hover:scale-105">
+                                                            <img
+                                                                src={
+                                                                    member.profile_path
+                                                                        ? `https://image.tmdb.org/t/p/w342${member.profile_path}`
+                                                                        : "https://placehold.co/342x513/1f2937/FFFFFF?text=N/A"
+                                                                }
+                                                                alt={member.name}
+                                                                className="w-full h-full object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        </div>
+
+                                                        <p className="text-sm font-bold truncate">{member.name}</p>
+                                                        <p className="text-xs text-gray-400 truncate">{member.character}</p>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </section>
+
+                                        {/* CREW */}
+                                        <CrewSection title="Directors" people={crew.directors} />
+                                        <CrewSection title="Writers" people={crew.writers} />
+                                        <CrewSection title="Producers" people={crew.producers} />
+                                        <CrewSection title="Music By" people={crew.music} />
+                                        <CrewSection title="Cinematography" people={crew.cinematography} />
+                                        <CrewSection title="Editors" people={crew.editors} />
+
                                     </div>
                                 )}
+
                                 {activeTab === 'reviews' && (
                                      <div>
                                         <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><MessageSquare className="w-6 h-6 text-[var(--dominant-color)]"/>Community Comments</h3>
