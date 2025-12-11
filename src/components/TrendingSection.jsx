@@ -54,6 +54,8 @@ function TrendingSection() {
               imdbRating: omdbData?.imdbRating,
               rtRating: omdbData?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value,
               genres: movie.genre_ids.map((id) => genreMap[id]).filter(Boolean),
+              //popularity: movie.popularity || 0,
+              //voteCount: movie.vote_count || 0,
             };
           })
         );

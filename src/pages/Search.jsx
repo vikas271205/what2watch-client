@@ -42,25 +42,74 @@ function Search() {
 	  }, []);
 
   
-  const processResults = (data) => {
-    const filteredResults = (data || [])
-      .filter((m) => (m.media_type === "movie" || m.media_type === "tv" || m.media_type === undefined) && !m.adult && m.poster_path)
-      .slice(0, 10)
-      .map(m => ({
-        ...m,
-        imageUrl: `https://image.tmdb.org/t/p/w300${m.poster_path}`,
-        tmdbRating: m.vote_average?.toString(),
-        language: m.original_language,
-        genres: m.genre_ids?.map(id => genreMap[id] || ""),
-        isTV: m.media_type === "tv",
-      }));
-    
-    setResults(filteredResults);
+const processResults = async (data) => {
+  const filtered = (data || [])
+    .filter(
+      (m) =>
+        (m.media_type === "movie" ||
+          m.media_type === "tv" ||
+          m.media_type === undefined) &&
+        !m.adult &&
+        m.poster_path
+    )
+    .slice(0, 10);
 
-    if (filteredResults.length > 0 && filteredResults[0].backdrop_path) {
-      setBackdropImage(`https://image.tmdb.org/t/p/original${filteredResults[0].backdrop_path}`);
-    }
-  };
+  // ---- FETCH OMDb + PREPARE UNIFORM FIELDS FOR UNCLE SCORE ENGINE ----
+  const enriched = await Promise.all(
+    filtered.map(async (m) => {
+      const title = m.title || m.name;
+      const year =
+        m.release_date?.substring(0, 4) ||
+        m.first_air_date?.substring(0, 4);
+
+      // Fetch IMDb + RT Ratings just like other pages
+      let imdbRating = null;
+      let rtRating = null;
+
+      try {
+        const omdb = await fetch(
+          `${API_BASE}/api/omdb?title=${encodeURIComponent(title)}&year=${year}`
+        ).then((r) => r.json());
+
+        imdbRating =
+          omdb?.Ratings?.find((r) => r.Source === "Internet Movie Database")
+            ?.Value?.split("/")[0] || null;
+
+        rtRating =
+          omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value ||
+          null;
+      } catch (err) {
+        console.error("OMDb failed", err);
+      }
+
+      return {
+        ...m,
+
+        // UI Fields
+        imageUrl: `https://image.tmdb.org/t/p/w300${m.poster_path}`,
+        isTV: m.media_type === "tv",
+        genres: m.genre_ids?.map((id) => genreMap[id] || ""),
+
+        // RAW rating fields passed to MovieCard → uncleScoreEngine
+        tmdbRating: m.vote_average,
+        imdbRating,
+        rtRating,
+        popularity: m.popularity,
+        voteCount: m.vote_count,
+      };
+    })
+  );
+
+  setResults(enriched);
+
+  // Backdrop
+  if (enriched.length > 0 && enriched[0].backdrop_path) {
+    setBackdropImage(
+      `https://image.tmdb.org/t/p/original${enriched[0].backdrop_path}`
+    );
+  }
+};
+
 
   useEffect(() => {
     if (initialQuery.trim()) {

@@ -14,7 +14,7 @@ import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark, Play } from "lucide-react";
 import { addToWatchHistory } from "../utils/watchHistory";
-import { calculateUncleScore } from "../utils/uncleScore";
+import { computeUncleScore } from "../utils/uncleScoreEngine";
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -212,6 +212,10 @@ function TVDetail() {
     const [cast, setCast] = useState([]);
     const [crew, setCrew] = useState({});
     const [related, setRelated] = useState([]);
+    const [castLoaded, setCastLoaded] = useState(false);
+    const [relatedLoaded, setRelatedLoaded] = useState(false);
+    const [seasonLoaded, setSeasonLoaded] = useState(false);
+
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
     const [userRating, setUserRating] = useState(0);
@@ -274,7 +278,7 @@ const fetchAll = async () => {
             omdbData?.Ratings?.find(r => r.Source === "Internet Movie Database")?.Value?.split("/")[0] || null;
 
         // 3) Now fetch everything else (AI + Worth-it + TMDB videos + credits + similar)
-        const [aiData, trailerData, castData, similarData] = await Promise.all([
+        const [aiData, trailerData] = await Promise.all([
             // AI Overview
             fetch(`${API_BASE}/api/ai/rewrite-overview`, {
                 method: "POST",
@@ -287,40 +291,38 @@ const fetchAll = async () => {
                 })
             }).then(res => res.json()),
 
-            fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`).then(res => res.json()),
-            fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`).then(res => res.json()),
-            fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`).then(res => res.json())
-        ]);
-        console.log("Similar Data Raw:", similarData);
-        console.log("Similar Results:", similarData?.results);
+            fetch(`${API_BASE}/api/tmdb/tv/${id}/videos`).then(res => res.json())
+            ]);
 
 
-        // 4) Apply AI Overview
-        if (aiData?.standard) setAiSummary(aiData.standard.trim());
+
+// 4) Apply the NEW AI Overview
+if (aiData?.summary) {
+    setAiSummary(aiData.summary.trim());
+} else {
+    setAiSummary(tvData.overview || "");
+}
 
         // 5) Community ratings (reusing OMDB + TMDB rating)
 const rtRating =
     omdbData?.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
 
-const worthIt = await calculateUncleScore(
-    tvData.name,
-    tvData.overview,
-    tvData.id,
-    tvData.vote_average,
-    imdbRating,
-    rtRating,
-    tvData.popularity,
-    tvData.genres?.map(g => g.name),
-    "tv"
-);
+// --- NEW UNCLE SCORE ENGINE ---
+const uncle = computeUncleScore({
+    tmdb: tvData.vote_average,
+    imdb: imdbRating,
+    rt: rtRating,
+    popularity: tvData.popularity,
+    genres: tvData.genres?.map(g => g.name) || []
+});
 
-// always set omdbRatings
 setOmdbRatings({
     imdb: imdbRating,
     rt: rtRating,
-    uncle: worthIt.score,
-    badge: worthIt.badge
+    uncle: uncle.score,
+    badge: uncle.badge
 });
+
 
 
         // 7) Age Rating logic (unchanged)
@@ -343,29 +345,6 @@ setOmdbRatings({
             v => v.type === "Trailer" && v.site === "YouTube"
         );
         setTrailerKey(trailer?.key || null);
-
-        // 9) Cast + Crew
-        setCast(castData.cast?.slice(0, 18) || []);
-
-        setCrew({
-            directors: castData.crew?.filter(p => p.job === "Director") || [],
-            writers: castData.crew?.filter(p =>
-                ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
-            ) || [],
-            producers: castData.crew?.filter(p =>
-                ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
-            ) || [],
-            music: castData.crew?.filter(p => p.job === "Original Music Composer") || [],
-            cinematography: castData.crew?.filter(p => p.job === "Director of Photography") || [],
-            editors: castData.crew?.filter(p => p.job === "Editor") || []
-        });
-
-        // 10) Related shows
-        const relatedArray = Array.isArray(similarData)
-        ? similarData
-        : similarData?.results || [];
-
-        setRelated(relatedArray.slice(0, 12));
 
 
         // 11) Streaming availability
@@ -391,26 +370,7 @@ setOmdbRatings({
         fetchAll();
     }, [id]);
 
-    useEffect(() => {
-        const fetchSeasonData = async () => {
-            if (!id || !selectedSeason) return;
-            setIsSeasonLoading(true);
-            try {
-                const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}/season/${selectedSeason}`);
-                const data = await res.json();
-                setSeasonDetails(data);
-            } catch (error) {
-                console.error("Failed to fetch season details:", error);
-                setSeasonDetails(null);
-            } finally {
-                setIsSeasonLoading(false);
-            }
-        };
-        if (activeTab === 'seasons') {
-            fetchSeasonData();
-        }
-    }, [id, selectedSeason, activeTab]);
-    
+
     useEffect(() => {
         const fetchUserSpecificData = async () => {
             if (currentUser && id) {
@@ -533,7 +493,90 @@ setOmdbRatings({
             </span>
         );
     };
+useEffect(() => {
+    if (activeTab !== "cast") return;
+    if (castLoaded) return;
 
+    const loadCastCrew = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}/credits`);
+            const data = await res.json();
+
+            setCast(data.cast?.slice(0, 18) || []);
+
+            setCrew({
+                directors: data.crew?.filter(p => p.job === "Director") || [],
+                writers: data.crew?.filter(p =>
+                    ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
+                ) || [],
+                producers: data.crew?.filter(p =>
+                    ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
+                ) || [],
+                music: data.crew?.filter(p => p.job === "Original Music Composer") || [],
+                cinematography: data.crew?.filter(p => p.job === "Director of Photography") || [],
+                editors: data.crew?.filter(p => p.job === "Editor") || []
+            });
+
+            setCastLoaded(true);
+        } catch (err) {
+            console.error("Failed to load cast & crew:", err);
+        }
+    };
+
+    loadCastCrew();
+}, [activeTab, id]);
+
+useEffect(() => {
+    if (activeTab !== "related") return;
+    if (relatedLoaded) return;
+
+    const loadRelated = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}/similar`);
+            const data = await res.json();
+
+            const result = Array.isArray(data)
+                ? data
+                : data?.results || [];
+
+            setRelated(result.slice(0, 12));
+            setRelatedLoaded(true);
+        } catch (err) {
+            console.error("Failed to load related shows:", err);
+        }
+    };
+
+    loadRelated();
+}, [activeTab, id]);
+
+useEffect(() => {
+    if (activeTab !== "seasons") return;
+
+    // If already loaded AND same season, skip fetch
+    if (seasonLoaded) return;
+
+    const loadSeason = async () => {
+        setIsSeasonLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/tmdb/tv/${id}/season/${selectedSeason}`);
+            const data = await res.json();
+            setSeasonDetails(data);
+            setSeasonLoaded(true);
+        } catch (err) {
+            console.error("Failed to load season details:", err);
+            setSeasonDetails(null);
+        } finally {
+            setIsSeasonLoading(false);
+        }
+    };
+
+    loadSeason();
+}, [activeTab, id]);
+useEffect(() => {
+    if (activeTab !== "seasons") return;
+
+    setSeasonLoaded(false); // force reload for new season
+}, [selectedSeason]);
 
     if (!tvShow) return <ShimmerDetail />;
 
@@ -745,11 +788,18 @@ setOmdbRatings({
                                                                                     </div>
                                     </div>
                                 )}
-                                {activeTab === 'seasons' && (
-                                    <SeasonsTab tvShow={tvShow} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} seasonDetails={seasonDetails} isLoading={isSeasonLoading} />
-                                )}
-                                {activeTab === 'cast' && (
-                                    <div className="space-y-10">
+     {activeTab === 'seasons' && (
+    !seasonLoaded && isSeasonLoading ? (
+        <p className="text-gray-400 p-4">Loading season & episodes...</p>
+    ) : (
+        <SeasonsTab
+ tvShow={tvShow} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} seasonDetails={seasonDetails} isLoading={isSeasonLoading} />
+                              )  )}
+{activeTab === 'cast' && (
+    !castLoaded ? (
+        <p className="text-gray-400 p-4">Loading cast & crew...</p>
+    ) : (
+        <div className="space-y-10">
 
                                         {/* CAST */}
                                         <section>
@@ -786,6 +836,7 @@ setOmdbRatings({
                                         <CrewSection title="Editors" people={crew.editors} />
 
                                     </div>
+    )
                                 )}
 
                                 {activeTab === 'reviews' && (
@@ -800,11 +851,16 @@ setOmdbRatings({
                                         </div>
                                      </div>
                                 )}
-                                {activeTab === 'related' && (
-                                   <div>
+{activeTab === 'related' && (
+    !relatedLoaded ? (
+        <p className="text-gray-400 p-4">Loading recommendations...</p>
+    ) : (
+        <div>
+
                                        <h3 className="text-2xl font-bold mb-4 text-white">You Might Also Like</h3>
                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">{related.map(m => <MovieCard key={m.id} id={m.id} title={m.name} isTV={true} imageUrl={m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null} tmdbRating={m.vote_average?.toString()} />)}</div>
                                     </div>
+    )
                                 )}
                             </motion.div>
                         </AnimatePresence>

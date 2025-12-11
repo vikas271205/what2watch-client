@@ -12,16 +12,14 @@ import ShimmerDetail from "../components/ShimmerDetail";
 import RatingCircle from "../components/RatingCircle";
 import { getWatchmodeId, getStreamingSources } from "../api/watchmode";
 import { motion, AnimatePresence } from "framer-motion";
+import { getOMDbRatings } from "../utils/omdbClient";
 // --- FIX: Import the Bookmark icon for the new UI ---
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Play, Bookmark } from "lucide-react";
 import { addToWatchHistory } from "../utils/watchHistory";
 import MovieInfoPanel from "../components/MovieInfoPanel";
-import {
-    formatWorthItScore,
-    getWorthItColor,
-    getWorthItBadge
-} from "../utils/worthItDisplay";
-import { calculateUncleScore } from "../utils/uncleScore";
+import { computeUncleScore} from "../utils/uncleScoreEngine";
+// In-memory AI cache for instantly revisiting a movie page
+const aiLocalCache = {};
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -168,6 +166,9 @@ function MovieDetail() {
     const [cast, setCast] = useState([]);
     const [crew, setCrew] = useState({});
     const [relatedMovies, setRelatedMovies] = useState([]);
+    const [castLoaded, setCastLoaded] = useState(false);
+    const [relatedLoaded, setRelatedLoaded] = useState(false);
+
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
     const [ageRating, setAgeRating] = useState(null);
@@ -275,20 +276,7 @@ function MovieDetail() {
 		    await setDoc(docRef, data);
 		    setIsInWatchlist(true);
 		}
-	  if (isInWatchlist) {
-    try {
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            await deleteDoc(docRef);
-            setIsInWatchlist(false);
-        } else {
-            // This case might happen if there's a quick double-click, it's safe to just update state
-            setIsInWatchlist(false);
-        }
-    } catch (err) {
-        console.error("Error removing from watchlist:", err);
-    }
-}
+
 
 	    } catch (error) {
 		console.error("Failed to update watchlist:", error);
@@ -296,10 +284,67 @@ function MovieDetail() {
 	    }
 	};
 
-	
+	// FAST NON-BLOCKING AI SUMMARY FETCH
+useEffect(() => {
+    if (!movie) return;
+
+    const cacheKey = `ai_${movie.id}`;
+
+    // 1. Instant return from in-memory cache
+    if (aiLocalCache[cacheKey]) {
+        setAiSummary(aiLocalCache[cacheKey]);
+        return;
+    }
+
+    // 2. Load from backend (which has Firestore cache)
+    const loadAi = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: movie.title,
+                    overview: movie.overview,
+                    genre: movie.genres?.map(g => g.name).join(", "),
+                    tmdbId: movie.id,
+                    type: "movie",
+                })
+            });
+
+            const data = await res.json();
+
+// NEW: Only use the simple friendly AI summary
+const summary = data.summary?.trim() || movie.overview;
+
+
+            // Save in-memory
+            aiLocalCache[cacheKey] = summary;
+
+            setAiSummary(summary);
+
+        } catch (err) {
+            console.error("AI summary error", err);
+            setAiSummary(movie.overview);
+        }
+    };
+
+    loadAi();
+}, [movie]);
+
 
     useEffect(() => {
         setMovie(null);
+setCast([]);
+setCrew({});
+setCastLoaded(false);
+
+setRelatedMovies([]);
+setRelatedLoaded(false);
+
+setStreamingSources([]);
+setOmdbRatings({ imdb: null, rt: null, uncle: null });
+setAgeRating(null);
+
         window.scrollTo(0, 0);
 
         const fetchAll = async () => {
@@ -311,132 +356,84 @@ function MovieDetail() {
                 
                 const movieData = await movieRes.json();
                 setMovie(movieData);
-
+  
+                // --- FETCH OMDB (cached globally) ---
                 if (reviewsRes.ok) {
                     const reviewsData = await reviewsRes.json();
                     if (Array.isArray(reviewsData)) { setReviews(reviewsData); }
                 }
 
+
+                const omdb = await getOMDbRatings(
+    movieData.title,
+    movieData.release_date?.slice(0, 4)
+);
+
+let imdbRating = null;
+let rtRating = null;
+
+if (omdb && omdb.Ratings) {
+    const imdbObj = omdb.Ratings.find(r => r.Source === "Internet Movie Database");
+    const rtObj = omdb.Ratings.find(r => r.Source === "Rotten Tomatoes");
+
+    if (imdbObj?.Value) {
+        imdbRating = parseFloat(imdbObj.Value.split("/")[0]);
+    }
+
+    if (rtObj?.Value) {
+        rtRating = rtObj.Value; // Keep % sign for circle component
+    }
+}
+
+
+// --- Compute UncleScore using unified engine ---
+const uncle = computeUncleScore({
+    tmdb: movieData.vote_average,
+    imdb: imdbRating,
+    rt: rtRating,
+    popularity: movieData.popularity,
+    genres: movieData.genres?.map(g => g.name) || []
+});
+
+// Apply to state
+setOmdbRatings({
+    imdb: imdbRating,
+    rt: rtRating,
+    uncle: uncle.score,
+    badge: uncle.badge
+});
+const trailerRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`);
+const trailerData = await trailerRes.json();
+
                 // Fetch all NON-AI data together
-                const [omdbData, trailerData, castData, similarData] = await Promise.all([
-                    fetch(`${API_BASE}/api/omdb?title=${encodeURIComponent(movieData.title)}&year=${movieData.release_date?.slice(0, 4)}`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/movie/${id}/videos`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`).then(res => res.json()),
-                    fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`).then(res => res.json()),
-                ]);
+
 
                 // Fetch NEW multi-style AI synopsis
-                const aiRes = await fetch(`${API_BASE}/api/ai/rewrite-overview`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        title: movieData.title,
-                        overview: movieData.overview,
-                        genre: movieData.genres?.map(g => g.name).join(", "),
-                        tmdbId: movieData.id,
-                        type: "movie",
-                    }),
-                });
 
-                const aiData = await aiRes.json();
-
-                // For the Details tab (single summary)
-                if (aiData.standard) {
-                    setAiSummary(aiData.standard.trim());
-                } else if (aiData.rewritten) {
-                    setAiSummary(aiData.rewritten.trim());
-                }
 
 
 
                 
-// --- COMMUNITY RATINGS (Unified, same as TVDetail) ---
-if (omdbData && !omdbData.error && omdbData.Ratings) {
-    const imdbRating = omdbData.Ratings.find(r =>
-        r.Source === "Internet Movie Database"
-    )?.Value?.split("/")[0] || null;
 
-    const rtRating = omdbData.Ratings.find(r =>
-        r.Source === "Rotten Tomatoes"
-    )?.Value || null;
-
-    // GET WORTH-IT SCORE (same unified logic)
-    const worth = await calculateUncleScore(
-        movieData.title,
-        movieData.overview,
-        movieData.id,
-        movieData.vote_average,
-        imdbRating,
-        rtRating,
-        movieData.popularity,
-        movieData.genres?.map(g => g.name),
-        "movie"
-    );
-
-    setOmdbRatings({
-        imdb: imdbRating,
-        rt: rtRating,
-        uncle: worth.score,
-        badge: worth.badge
-    });
-
-    // AGE RATING SECTION (unchanged)
-    let finalRating = null;
-    if (omdbData?.Rated && omdbData.Rated !== "N/A") {
-        finalRating = ratingMap[omdbData.Rated] || omdbData.Rated;
-    }
-    if (!finalRating) {
-        const certRes = await fetch(`${API_BASE}/api/tmdb/movie/${id}/release_dates`);
-        const certData = await certRes.json();
-        const usRelease = certData?.results?.find(c => c.iso_3166_1 === "US");
-        const usCert = usRelease?.release_dates?.find(r => r.certification)?.certification;
-        if (usCert) finalRating = ratingMap[usCert] || usCert;
-    }
-    if (!finalRating) finalRating = getHeuristicRating(movieData.genres);
-    if (!finalRating) finalRating = "Rating Not Available";
-    setAgeRating(finalRating);
-}
 
                 const trailer = trailerData.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
                 setTrailerKey(trailer?.key || null);
-                setCast(castData.cast?.slice(0, 18) || []);
-                // --- CREW CATEGORIES ---
-                const directors = castData.crew?.filter(p => p.job === "Director") || [];
-                const writers = castData.crew?.filter(p =>
-                    ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
-                ) || [];
-                const producers = castData.crew?.filter(p =>
-                    ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
-                ) || [];
-                const music = castData.crew?.filter(p => p.job === "Original Music Composer") || [];
-                const cinematography = castData.crew?.filter(p => p.job === "Director of Photography") || [];
-                const editors = castData.crew?.filter(p => p.job === "Editor") || [];
+                // STREAMING SOURCES (Watchmode)
+try {
+    const releaseYear = movieData.release_date?.slice(0, 4);
 
-                // Save inside state
-                setCrew({
-                    directors,
-                    writers,
-                    producers,
-                    music,
-                    cinematography,
-                    editors,
-                });
+    const wmId = await getWatchmodeId(movieData.title, releaseYear, "movie");
+    if (wmId) {
+        const sources = await getStreamingSources(wmId);
+        const filtered = sources?.filter(s => s.type === "sub" || s.type === "free");
+        setStreamingSources(filtered?.length ? filtered : [{ name: "Not available in your region", type: "note" }]);
+    } else {
+        setStreamingSources([]);
+    }
+} catch (err) {
+    console.error("Streaming fetch failed", err);
+}
 
-                setRelatedMovies(similarData.results?.slice(0, 12) || []);
-
-                const releaseYear = movieData.release_date?.slice(0, 4);
-                const wmId = await getWatchmodeId(movieData.title, releaseYear, "movie");
-                if (wmId) {
-                    const sources = await getStreamingSources(wmId);
-                    const filtered = (sources || []).filter(src => src.type === "sub" || src.type === "free");
-                    if (filtered.length > 0) {
-                        setStreamingSources(filtered);
-                    } else {
-                        setStreamingSources([{ name: "Not available for streaming in your region", type: "note", web_url: null }]);
-                    }
-                } else {
-                    setStreamingSources([]);
-                }
 
             } catch (err) { console.error("Failed to fetch movie details:", err); }
         };
@@ -522,6 +519,55 @@ const handleDeleteReview = async (reviewId) => {
          genres: movie.genres?.map(g => g.name) || []
         });
     }, [movie]);
+    useEffect(() => {
+    if (activeTab !== "cast") return;
+    if (castLoaded) return;
+
+    const loadCastCrew = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/tmdb/movie/${id}/credits`);
+            const data = await res.json();
+
+            setCast(data.cast?.slice(0, 18) || []);
+
+            setCrew({
+                directors: data.crew?.filter(p => p.job === "Director") || [],
+                writers: data.crew?.filter(p =>
+                    ["Writer", "Screenplay", "Story", "Author"].includes(p.job)
+                ) || [],
+                producers: data.crew?.filter(p =>
+                    ["Producer", "Executive Producer", "Co-Producer"].includes(p.job)
+                ) || [],
+                music: data.crew?.filter(p => p.job === "Original Music Composer") || [],
+                cinematography: data.crew?.filter(p => p.job === "Director of Photography") || [],
+                editors: data.crew?.filter(p => p.job === "Editor") || [],
+            });
+
+            setCastLoaded(true);
+        } catch (err) {
+            console.error("Failed to load cast & crew", err);
+        }
+    };
+
+    loadCastCrew();
+}, [activeTab, id]);
+useEffect(() => {
+    if (activeTab !== "related") return;
+    if (relatedLoaded) return;
+
+    const loadRelated = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/tmdb/movie/${id}/similar`);
+            const data = await res.json();
+            setRelatedMovies(data.results?.slice(0, 12) || []);
+            setRelatedLoaded(true);
+        } catch (err) {
+            console.error("Failed to load related movies", err);
+        }
+    };
+
+    loadRelated();
+}, [activeTab, id]);
 
 
     if (!movie) return <ShimmerDetail />;
@@ -666,8 +712,11 @@ const handleDeleteReview = async (reviewId) => {
                                          </div>
                                     </div>
                                 )}
-                                {activeTab === 'cast' && (
-                                    <div className="space-y-10">
+{activeTab === 'cast' && (
+    !castLoaded ? (
+        <p className="text-gray-400 p-4">Loading cast & crew...</p>
+    ) : (
+        <div className="space-y-10">
 
                                         {/* CAST */}
                                         <section>
@@ -704,8 +753,10 @@ const handleDeleteReview = async (reviewId) => {
                                         <CrewSection title="Cinematography" people={crew.cinematography} />
                                         <CrewSection title="Editors" people={crew.editors} />
 
-                                    </div>
-                                )}
+                            </div>
+    )
+)}
+
 
                                 {activeTab === 'reviews' && (
                                      <div>
@@ -719,12 +770,18 @@ const handleDeleteReview = async (reviewId) => {
                                         </div>
                                      </div>
                                 )}
-                                {activeTab === 'related' && (
-                                   <div>
+                               {activeTab === 'related' && (
+    !relatedLoaded ? (
+        <p className="text-gray-400 p-4">Loading related movies...</p>
+    ) : (
+        <div>
+
                                        <h3 className="text-2xl font-bold mb-4 text-white">You Might Also Like</h3>
                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">{relatedMovies.map(m => <MovieCard key={m.id} id={m.id} title={m.title} imageUrl={m.poster_path ? `https://image.tmdb.org/t/p/w342${m.poster_path}` : null} tmdbRating={m.vote_average?.toString()} />)}</div>
-                                    </div>
-                                )}
+                                   </div>
+    )
+)}
+
 
 
                             </motion.div>
