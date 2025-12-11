@@ -1,11 +1,14 @@
 import React from 'react';
 
 function ScoreCircle({ score }) {
-  const scoreValue = Math.round(score * 10);
-  if (isNaN(scoreValue) || scoreValue <= 0) {
+  // Ensure score is always a valid number
+  const numericScore = Number(score);
+
+  if (isNaN(numericScore) || numericScore <= 0) {
     return null; // Don't render if score is invalid
   }
 
+  const scoreValue = Math.round(numericScore * 10); // Convert 0–10 → 0–100
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (scoreValue / 100) * circumference;
@@ -13,11 +16,11 @@ function ScoreCircle({ score }) {
   let strokeColor = "stroke-green-500";
   if (scoreValue < 70) strokeColor = "stroke-yellow-500";
   if (scoreValue < 40) strokeColor = "stroke-red-500";
-  
+
   return (
     <div className="relative w-10 h-10">
       <svg className="w-full h-full" viewBox="0 0 36 36">
-        {/* Background Circle */}
+        {/* Background */}
         <circle
           className="stroke-current text-gray-700/50"
           strokeWidth="3"
@@ -26,7 +29,8 @@ function ScoreCircle({ score }) {
           cy="18"
           r={radius}
         />
-        {/* Progress Circle */}
+
+        {/* Progress */}
         <circle
           className={`stroke-current ${strokeColor} origin-center -rotate-90`}
           strokeWidth="3"
@@ -39,9 +43,12 @@ function ScoreCircle({ score }) {
           r={radius}
         />
       </svg>
-      {/* Text in the Center */}
+
+      {/* Score Text */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-white text-xs font-bold">{score.toFixed(1)}</span>
+        <span className="text-white text-xs font-bold">
+          {numericScore.toFixed(1)}
+        </span>
       </div>
     </div>
   );

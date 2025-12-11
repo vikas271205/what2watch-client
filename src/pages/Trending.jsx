@@ -6,7 +6,7 @@ import { useLoading } from "../context/LoadingContext";
 import ShimmerListGrid from "../components/ShimmerListGrid";
 import { motion } from "framer-motion";
 import { fetchOMDbData } from "../api/omdb"; 
-import { calculateUncleScore } from "../utils/uncleScore";
+import { computeUncleScore } from "../utils/uncleScoreEngine";
 
 const timeFilters = {
   day: "Trending Today",
@@ -41,18 +41,33 @@ function Trending() {
 
         if (!initialData || initialData.length === 0) { setHasMore(false); return; }
 
-        // We still fetch extra data to calculate and DISPLAY the full Uncle Score
-        const detailedDataPromises = initialData.map(async (item) => {
-          const year = item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4);
-          const omdbData = await fetchOMDbData(item.title || item.name, year);
-          
-          const uncleScore = calculateUncleScore(
-            item.vote_average,
-            omdbData?.imdbRating,
-            omdbData?.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value
-          );
-          return { ...item, ...omdbData, uncleScore };
-        });
+const detailedDataPromises = initialData.map(async (item) => {
+  const title = item.title || item.name;
+  const year = item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4);
+
+  // ---- OMDb FETCH (safe) ----
+  const omdb = await fetchOMDbData(title, year);
+
+  const imdb = omdb?.imdbRating || null;
+  const rt = omdb?.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value || null;
+
+  // ---- UNCLE SCORE ENGINE ----
+  const uncleScore = computeUncleScore({
+    tmdb: item.vote_average,
+    imdb,
+    rt,
+    popularity: item.popularity,
+    genres: (item.genre_ids || []).map(id => genreMap[id] || "")
+  });
+
+  return {
+    ...item,
+    imdbRating: imdb,
+    rtRating: rt,
+    uncleScore     // { score, raw, badge }
+  };
+});
+
 
         const combinedData = await Promise.all(detailedDataPromises);
 
@@ -83,10 +98,9 @@ const finalContent = combinedData
       genres: (item.genre_ids || []).map(id => genreMap[id] || ""),
       isTV: !!item.name,
       year: item.release_date?.substring(0, 4) || item.first_air_date?.substring(0, 4),
+uncleScore: item.uncleScore?.score ?? null,
+uncleBadge: item.uncleScore?.badge ?? null,
 
-      // WORTH IT SYSTEM — SAFE ALWAYS
-      uncleScore: finalScore,
-      uncleBadge: item.uncleScore?.badge ?? null,
     };
   });
 

@@ -87,14 +87,50 @@ function TVShows() {
         filtered = filtered.filter((s) => !s.genre_ids.includes(16));
       }
 
-      const transformed = filtered.map((show) => ({
-        ...show,
-        tmdbRating: show.vote_average?.toString(),
-        language: show.original_language,
-        genres: show.genre_ids?.map(
-          (id) => genres.find((g) => g.id === id)?.name || ""
-        ),
-      }));
+const transformed = await Promise.all(
+  filtered.map(async (show) => {
+    const title = show.name;
+    const year = show.first_air_date?.substring(0, 4);
+
+    // --- Fetch IMDb & RT for accurate Uncle Score ---
+    let imdbRating = null;
+    let rtRating = null;
+
+    try {
+      const omdb = await fetch(
+        `${API_BASE}/api/omdb?title=${encodeURIComponent(title)}&year=${year}`
+      ).then((r) => r.json());
+
+      imdbRating =
+        omdb?.Ratings?.find((r) => r.Source === "Internet Movie Database")
+          ?.Value?.split("/")[0] || null;
+
+      rtRating =
+        omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value ||
+        null;
+    } catch (err) {
+      console.error("OMDb fetch failed:", err);
+    }
+
+    return {
+      ...show,
+
+      // Needed for MovieCard → Uncle Score Engine
+      tmdbRating: show.vote_average,
+      imdbRating,
+      rtRating,
+      popularity: show.popularity,
+      voteCount: show.vote_count,
+      year,
+
+      language: show.original_language,
+      genres: show.genre_ids?.map((id) => genres.find((g) => g.id === id)?.name || ""),
+      isTV: true,
+      imageUrl: `https://image.tmdb.org/t/p/w300${show.poster_path}`,
+    };
+  })
+);
+
 
       let finalList = [...transformed];
 
@@ -229,16 +265,21 @@ function TVShows() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {shows.map((show) => (
-                <MovieCard
-                  key={show.id}
-                  id={show.id}
-                  title={show.name}
-                  imageUrl={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
-                  tmdbRating={show.tmdbRating}
-                  genres={show.genres}
-                  language={show.language}
-                  isTV={true}
-                />
+<MovieCard
+  key={show.id}
+  id={show.id}
+  title={show.name}
+  imageUrl={show.imageUrl}
+  tmdbRating={show.tmdbRating}
+  imdbRating={show.imdbRating}
+  rtRating={show.rtRating}
+  popularity={show.popularity}
+  voteCount={show.voteCount}
+  genres={show.genres}
+  year={show.year}
+  isTV={true}
+/>
+
               ))}
             </div>
           )}

@@ -66,7 +66,60 @@ export default function UnclesPick() {
       });
   };
   
-  const filteredItems = applyFilters(items);
+const [enrichedItems, setEnrichedItems] = useState([]);
+
+useEffect(() => {
+  const enrich = async () => {
+    if (!items.length) {
+      setEnrichedItems([]);
+      return;
+    }
+
+    const enriched = await Promise.all(
+      items.map(async (item) => {
+        const title = item.title;
+        const year = item.year || item.release_date?.slice(0, 4);
+
+        let imdbRating = null;
+        let rtRating = null;
+
+        try {
+          // const omdb = await fetch(
+          //   `${API_BASE}/api/omdb?title=${encodeURIComponent(title)}&year=${year}`
+          // ).then((r) => r.json());
+
+          // imdbRating =
+          //   omdb?.Ratings?.find((r) => r.Source === "Internet Movie Database")
+          //     ?.Value?.split("/")[0] || null;
+
+          // rtRating =
+          //   omdb?.Ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value ||
+          //   null;
+        } catch (e) {
+          console.error("OMDb failed:", e);
+        }
+
+        return {
+          ...item,
+          tmdbRating: item.tmdbRating || item.rating,
+          imdbRating,
+          rtRating,
+          popularity: item.popularity || 0,
+          voteCount: item.vote_count || 50, // safe fallback
+          genres: item.genre_ids?.map((id) => genreMap[id]) || [],
+          year,
+          imageUrl: item.poster,
+        };
+      })
+    );
+
+    setEnrichedItems(enriched);
+  };
+
+  enrich();
+}, [items]);
+
+const filteredEnrichedItems = applyFilters(enrichedItems);
 
   const handleDelete = async (item) => {
     if (!window.confirm(`Delete "${item.title}"?`)) return;
@@ -194,7 +247,7 @@ export default function UnclesPick() {
               <div key={i} className="aspect-[2/3] bg-gray-800 rounded-lg animate-pulse" />
             ))}
           </div>
-        ) : filteredItems.length > 0 ? (
+        ) : filteredEnrichedItems.length > 0 ? (
           <>
             <motion.div
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-10"
@@ -202,7 +255,7 @@ export default function UnclesPick() {
               initial="hidden"
               animate="show"
             >
-              {filteredItems.slice(0, displayLimit).map((item) => {
+              {filteredEnrichedItems.slice(0, displayLimit).map((item) => {
                 const isTV = item.type === 'tv' || item.genre_ids?.includes(16);
                 return (
                   <motion.div
@@ -210,23 +263,30 @@ export default function UnclesPick() {
                     variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
                     className="relative"
                   >
-                    <MovieCard
-                      id={item.id}
-                      title={item.title}
-                      imageUrl={item.poster}
-                      tmdbRating={item.tmdbRating || item.rating?.toString()}
-                      type={item.type}
-                      isTV={isTV}
-                      isAdmin={isAdmin}
-                      showRemoveButton={isAdmin}
-                      showUncleScore={true}
-                      onDelete={() => handleDelete(item)}
-                    />
+<MovieCard
+  id={item.id}
+  title={item.title}
+  imageUrl={item.imageUrl}
+  tmdbRating={item.tmdbRating}
+  imdbRating={null}
+  rtRating={null}
+  popularity={item.popularity}
+  voteCount={item.voteCount}
+  genres={item.genres}
+  year={item.year}
+  type={item.type}
+  isTV={isTV}
+  showUncleScore={true}
+  isAdmin={isAdmin}
+  showRemoveButton={isAdmin}
+  onDelete={() => handleDelete(item)}
+/>
+
                   </motion.div>
                 );
               })}
             </motion.div>
-            {displayLimit < filteredItems.length && (
+            {displayLimit < filteredEnrichedItems.length && (
               <div className="text-center pt-12">
                 <motion.button
                   onClick={() => setDisplayLimit(prev => prev + 12)}

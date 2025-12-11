@@ -1,19 +1,11 @@
 // src/components/MovieCard.jsx
-
-import React, { useState, useEffect, useRef } from "react"; 
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { auth, db } from "../firebase"; // FIX: Use the shared 'db' instance imported from your firebase config.
-import { doc, setDoc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-
-import { calculateUncleScore } from "../utils/uncleScore";
+import { computeUncleScore } from "../utils/uncleScoreEngine";
 import API_BASE from "../utils/api";
 import ScoreCircle from "./ScoreCircle";
-import {
-  formatWorthItScore,
-  getWorthItColor,
-  getWorthItBadge
-} from "../utils/worthItDisplay";
 
 function MovieCard({
   id,
@@ -25,219 +17,141 @@ function MovieCard({
   tmdbRating,
   imdbRating,
   rtRating,
-  uncleScore,
-  uncleBadge,
+  popularity,
+  voteCount,
   isSaved: initialIsSaved,
   year,
   isAdmin = false,
   onDelete,
   showUncleScore = true,
 }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaved, setIsSaved] = useState(initialIsSaved || false);
-  // REMOVED: Redundant and problematic Firestore initialization.
-  // const db = getFirestore(); 
-const [currentUser, setCurrentUser] = useState(auth.currentUser);
+   const [currentUser, setCurrentUser] = useState(auth.currentUser);
 
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
-    setCurrentUser(user);
-  });
-  return () => unsubscribe();
-}, []);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsub();
+  }, []);
 
   const cardRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
 
-// 1) Prefer backend-provided worth-it score
-let base = uncleScore;
+  // ---------------------------
+  // ALWAYS COMPUTE UNCLE SCORE HERE
+  // ---------------------------
 
-// 2) If backend did NOT send it → fallback to TMDB
-if (base == null && tmdbRating != null) {
-  base = parseFloat(tmdbRating);
-}
+  const scoreObj = computeUncleScore({
+    tmdb: tmdbRating,
+    imdb: imdbRating,
+    rt: rtRating,
+    popularity,
+    genres,
+    voteCount,
+    releaseYear: year,
+  });
 
-// 3) Format score (Option C)
-const finalScore = formatWorthItScore(base);
+  const finalScoreNumber = scoreObj?.score ?? null;
+  const finalBadge = scoreObj?.badge ?? null;
 
-// 4) UI color + badge (frontend-only)
-const finalColor = getWorthItColor(base);
-const finalBadge = uncleBadge ?? getWorthItBadge(base);
+  const finalColor =
+    finalScoreNumber >= 8.5 ? "#16a34a" :
+    finalScoreNumber >= 7   ? "#2563eb" :
+    finalScoreNumber >= 5.5 ? "#ca8a04" :
+    finalScoreNumber >= 4   ? "#f87171" :
+    "#525252";
 
+  const linkTo = isTV || type === "tv" ? `/tv/${id}` : `/movie/${id}`;
 
-  const linkTo = type === "tv" || isTV ? `/tv/${id}` : `/movie/${id}`;
-  
   useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
+    const obs = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
         setIsVisible(true);
-        observer.unobserve(entry.target);
+        obs.unobserve(entry.target);
       }
     }, { threshold: 0.1 });
-    const currentCardRef = cardRef.current;
-    if (currentCardRef) observer.observe(currentCardRef);
-    return () => { if (currentCardRef) observer.unobserve(currentCardRef) };
+
+    if (cardRef.current) obs.observe(cardRef.current);
+    return () => { if (cardRef.current) obs.unobserve(cardRef.current); };
   }, []);
 
-useEffect(() => {
-  const checkWatchlist = async () => {
-    if (!currentUser) {
-      setIsSaved(false);
-      return;
-    }
-
-    try {
-      const docId = isTV ? `${currentUser.uid}_${id}_tv` : `${currentUser.uid}_${id}`;
-      const watchRef = doc(db, "watchlists", docId);
-      const watchSnap = await getDoc(watchRef);
-      setIsSaved(watchSnap.exists());
-    } catch (err) {
-      // Only log real permission errors, but still reset state
-      if (err.code !== "permission-denied") console.error("Could not check watchlist status:", err);
-      setIsSaved(false);
-    }
-  };
-
-  checkWatchlist();
-}, [currentUser, id, isTV]);
 
 
-const toggleSave = async (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  if (!currentUser) {
-    alert("Please log in to manage your watchlist.");
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    const docId = isTV ? `${currentUser.uid}_${id}_tv` : `${currentUser.uid}_${id}`;
-    const ref = doc(db, "watchlists", docId);
-
-    if (isSaved) {
-      await deleteDoc(ref);
-      setIsSaved(false);
-    } else {
-      await setDoc(ref, {
-        userId: currentUser.uid,
-        [isTV ? "tvId" : "movieId"]: isTV ? `${id}_tv` : id,
-        title,
-        imageUrl,
-        rating: tmdbRating,
-        timestamp: serverTimestamp(),
-      });
-      setIsSaved(true);
-    }
-  } catch (err) {
-    console.error("Failed to toggle watchlist:", err);
-    alert("Could not update watchlist. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
-  
   const handleAdminDelete = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!onDelete || !isAdmin) return;
     if (!window.confirm(`Delete "${title}" from recommended?`)) return;
+
     try {
-        const token = await currentUser.getIdToken();
-        const res = await fetch(`${API_BASE}/api/recommend/${type}_${id}`, {
-            method: "DELETE", headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Server responded with an error');
-        const result = await res.json();
-        if (result.success) {
-            onDelete(`${type}_${id}`);
-        } else {
-            alert(result.error || "Failed to delete");
-        }
-    } catch(err) {
-        console.error("Failed to delete recommendation:", err);
-        alert("An error occurred while deleting.");
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE}/api/recommend/${type}_${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const r = await res.json();
+      if (r.success) onDelete(`${type}_${id}`);
+      else alert(r.error || "Failed to delete");
+    } catch {
+      alert("An error occurred while deleting.");
     }
   };
-  // Convert formatted score back to number for ScoreCircle
-const finalScoreNumber = (typeof base === "number" && !isNaN(base)) 
-  ? Number(base) 
-  : null;
 
   return (
     <Link
       to={linkTo}
       ref={cardRef}
-      aria-label={`View details for ${title}`}
-      className={`w-full shrink-0 font-inter ${isVisible ? "animate-fadeInUp" : "opacity-0"} block relative rounded-xl overflow-hidden shadow-lg group transition-transform duration-300 hover:scale-105 hover:shadow-2xl`}
+      className={`w-full shrink-0 font-inter ${
+        isVisible ? "animate-fadeInUp" : "opacity-0"
+      } block relative rounded-xl overflow-hidden shadow-lg group transition-transform duration-300 hover:scale-105 hover:shadow-2xl`}
     >
       <div className="relative aspect-[2/3] bg-slate-200 dark:bg-gray-800">
         <img
-          src={imageUrl || "https://via.placeholder.com/300x450/e2e8f0/9ca3af?text=No+Image"}
-          alt={`Poster for ${title}`}
+          src={imageUrl || "https://via.placeholder.com/300x450"}
+          alt={title}
           className="w-full h-full object-cover"
         />
-        
+
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-    <div className="absolute inset-0 flex flex-col justify-end p-3 text-white">
 
-  {/* WORTH-IT BADGE ABOVE TITLE */}
-  {finalBadge && (
-    <div className="mb-1">
-      <span
-        className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-        style={{
-          backgroundColor: finalColor + "30",
-          color: finalColor,
-          border: `1px solid ${finalColor}50`,
-        }}
-      >
-        {finalBadge}
-      </span>
-    </div>
-  )}
+        <div className="absolute inset-0 flex flex-col justify-end p-3 text-white">
 
-  {/* MOVIE TITLE */}
-  <h3 className="text-sm font-bold line-clamp-2 drop-shadow-lg">
-    {title}
-  </h3>
 
-  {/* YEAR (ALWAYS VISIBLE) */}
-  {year && (
-    <span className="text-xs font-semibold mt-1 bg-black/30 px-2 py-0.5 rounded-md w-fit">
-      {year}
-    </span>
-  )}
+          <h3 className="text-sm font-bold line-clamp-2 drop-shadow-lg">{title}</h3>
 
-  {/* GENRES */}
-  {/* <div className="flex gap-1.5 flex-wrap mt-1">
-    {genres.slice(0, 2).map((genre, i) => (
-      <span
-        key={`${genre}-${i}`}
-        className="text-xs font-semibold rounded-full px-2.5 py-1 bg-black/30 backdrop-blur-sm"
-      >
-        {genre}
-      </span>
-    ))}
-  </div> */}
+          {year && (
+            <span className="text-xs font-semibold mt-1 bg-black/30 px-2 py-0.5 rounded-md w-fit">
+              {year}
+            </span>
+          )}
+        </div>
 
-</div>
-
-        
-       {currentUser && (
-          <button onClick={toggleSave} disabled={isLoading} aria-label={isSaved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`} className={`absolute top-2 right-2 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200 transform hover:scale-110 shadow-md ${isSaved ? "bg-green-500 hover:bg-green-400 text-white" : "bg-gray-800/60 hover:bg-gray-700/80 text-white backdrop-blur-sm"}`}>
-            {isLoading ? '...' : (isSaved ? "✓" : "+")}
-          </button>
-        )}
-{showUncleScore && finalScore && (
-  <div className="absolute top-1 left-1 bg-black/50 rounded-full p-1">
-    <ScoreCircle score={finalScoreNumber} color={finalColor} />
+{finalBadge && (
+  <div
+    className="absolute top-1 right-1 px-2 py-1 rounded-full text-[10px] font-bold shadow-md backdrop-blur-sm"
+    style={{
+      backgroundColor: finalColor + "cc",
+      color: "#fff",
+      border: `1px solid ${finalColor}`,
+    }}
+  >
+    {finalBadge}
   </div>
 )}
 
+
+
+        {showUncleScore && finalScoreNumber != null && (
+          <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md rounded-full p-1.5 shadow-xl">
+   <ScoreCircle score={finalScoreNumber} color={finalColor} />
+          </div>
+        )}
+
         {location.pathname === "/unclespick" && isAdmin && onDelete && (
-          <button onClick={handleAdminDelete} className="absolute top-12 right-2 p-1.5 rounded-full text-xs font-medium backdrop-blur-md bg-red-600/80 hover:bg-red-500/90 text-white">
+          <button
+            onClick={handleAdminDelete}
+            className="absolute top-12 right-2 p-1.5 rounded-full text-xs font-medium backdrop-blur-md bg-red-600/80 hover:bg-red-500/90 text-white"
+          >
             🗑️
           </button>
         )}
@@ -246,5 +160,4 @@ const finalScoreNumber = (typeof base === "number" && !isNaN(base))
   );
 }
 
-// React.memo is used to prevent unnecessary re-renders of the card
 export default React.memo(MovieCard);

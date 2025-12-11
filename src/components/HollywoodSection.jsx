@@ -4,7 +4,7 @@ import API_BASE from "../utils/api";
 import { fetchOMDbData } from "../api/omdb";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Film } from "lucide-react";
-
+import genreMap from "../utils/GenreMap";
 function HollywoodSection() {
   const [movies, setMovies] = useState([]);
   const scrollRef = useRef();
@@ -34,12 +34,8 @@ function HollywoodSection() {
               title: movie.title,
               year: movie.release_date?.slice(0, 4),
               imageUrl: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-              genres: movie.genre_ids.map(id => {
-                // Simplified genre mapping since we don't fetch the map here
-                // For a full solution, a global genre context would be best
-                const genreMatch = movie.genres?.find(g => g.id === id);
-                return genreMatch ? genreMatch.name : "";
-              }).filter(Boolean),
+genres: movie.genre_ids.map(id => genreMap[id]).filter(Boolean),
+
               isTV: false,
               tmdbRating: movie.vote_average?.toString(),
               imdbRating: omdbData?.imdbRating,
