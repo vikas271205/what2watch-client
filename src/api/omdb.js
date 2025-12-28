@@ -1,5 +1,6 @@
 // client/api/omdb.js
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
+
 
 // In-memory cache for failed requests (resets on page refresh)
 const failedCache = new Set();

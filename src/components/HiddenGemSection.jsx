@@ -1,103 +1,103 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
+import ShimmerList from "./ShimmerLIst";
 import { fetchHiddenGems } from "../api/tmdb";
 import { fetchOMDbData } from "../api/omdb";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import genreMap from "../utils/GenreMap";
 
 export default function HiddenGemSection() {
-  const [movies, setMovies] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const scrollRef = useRef();
+  const scrollRef = useRef(null);
 
   useEffect(() => {
-    console.log("[HiddenGemSection] Mounted");
+    let mounted = true;
 
     const load = async () => {
+      setLoading(true);
+
       try {
         const raw = await fetchHiddenGems();
-        console.log("[HiddenGemSection] Raw results:", raw.length);
+        if (!mounted) return;
 
-        const filtered = raw.filter(m => m.poster_path);
-        console.log("[HiddenGemSection] Filtered poster count:", filtered.length);
+        // Safety filters
+        const filtered = raw
+          .filter(i => i.poster_path && i.hiddenGemScore)
+          .slice(0, 15);
 
-        const sliced = filtered.slice(0, 15);
-        console.log("[HiddenGemSection] Using first 15 items");
+        const enriched = await Promise.all(
+          filtered.map(async (item) => {
+            try {
+              const title =
+                item.type === "tv" ? item.title : item.title;
 
-const enriched = await Promise.all(
-  sliced.map(async (m) => {
-    try {
-      const omdb = await fetchOMDbData(
-        m.title,
-        m.release_date?.slice(0, 4)
-      );
+              const year =
+                item.type === "tv"
+                  ? item.first_air_date?.slice(0, 4)
+                  : item.release_date?.slice(0, 4);
 
-      // --- PROPER IMDb extraction ---
-      let imdbNum = null;
-      if (omdb?.imdbRating && omdb.imdbRating !== "N/A") {
-        imdbNum = parseFloat(omdb.imdbRating); // "7.8/10" becomes 7.8
-      }
+              const omdb = await fetchOMDbData(title, year);
 
-      // --- PROPER Rotten Tomatoes extraction ---
-      let rtValue = null;
-      const rtItem = omdb?.Ratings?.find(
-        (r) => r.Source === "Rotten Tomatoes"
-      );
-      if (rtItem?.Value) {
-        rtValue = rtItem.Value; // Example: "92%"
-      }
+              // IMDb
+              let imdbNum = null;
+              if (omdb?.imdbRating && omdb.imdbRating !== "N/A") {
+                imdbNum = parseFloat(omdb.imdbRating);
+              }
 
-      // --- Convert TMDB genre_ids → names ---
-      const genreNames = (m.genre_ids || [])
-        .map((id) => genreMap[id])
-        .filter(Boolean);
+              // Rotten Tomatoes
+              let rtValue = null;
+              const rtItem = omdb?.Ratings?.find(
+                r => r.Source === "Rotten Tomatoes"
+              );
+              if (rtItem?.Value) rtValue = rtItem.Value;
 
-      return {
-        id: m.id,
-        title: m.title,
-        year: m.release_date?.slice(0, 4),
-        imageUrl: `https://image.tmdb.org/t/p/w500${m.poster_path}`,
+              const genreNames = (item.genre_ids || [])
+                .map(id => genreMap[id])
+                .filter(Boolean);
 
-        // REQUIRED FOR SCORING
-        tmdbRating: m.vote_average ?? null,
-        imdbRating: imdbNum,
-        rtRating: rtValue,
-        popularity: m.popularity ?? 0,
-        voteCount: m.vote_count ?? 0,
-        genres: genreNames,
+              return {
+                id: item.id,
+                title,
+                year,
+                imageUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
 
-        isTV: false,
-      };
-    } catch (err) {
-      console.error("[HiddenGem] OMDB failed:", m.title, err);
-      return null;
-    }
-  })
-);
+                tmdbRating: item.vote_average ?? null,
+                imdbRating: imdbNum,
+                rtRating: rtValue,
+                popularity: item.popularity ?? 0,
+                voteCount: item.vote_count ?? 0,
+                genres: genreNames,
 
+                isTV: item.type === "tv",
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
 
-
-        const valid = enriched.filter(Boolean);
-        console.log("[HiddenGemSection] Enriched movies:", valid.length);
-
-        setMovies(valid);
+        if (mounted) {
+          setItems(enriched.filter(Boolean));
+        }
       } catch (err) {
-        console.error("[HiddenGemSection] Error loading Hidden Gems:", err);
+        console.error("[HiddenGemSection] Load error:", err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const scroll = (direction) => {
+  const scroll = (dir) => {
     const el = scrollRef.current;
     if (!el) return;
-
-    const amt = el.offsetWidth;
     el.scrollBy({
-      left: direction === "left" ? -amt : amt,
+      left: dir === "left" ? -el.offsetWidth : el.offsetWidth,
       behavior: "smooth",
     });
   };
@@ -112,22 +112,15 @@ const enriched = await Promise.all(
       </div>
 
       {loading ? (
-        <div className="grid grid-flow-col auto-cols-[calc(100%/2.4)] sm:auto-cols-[calc(100%/3.4)] lg:auto-cols-[calc(100%/5.4)] gap-4 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[2/3] bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"
-            />
-          ))}
-        </div>
+        <ShimmerList count={6} />
       ) : (
         <div className="relative">
           <div
             ref={scrollRef}
             className="grid grid-flow-col auto-cols-[calc(100%/2.4)] sm:auto-cols-[calc(100%/3.4)] lg:auto-cols-[calc(100%/5.4)] gap-4 overflow-x-auto no-scrollbar py-4"
           >
-            {movies.map((m) => (
-              <MovieCard key={m.id} {...m} />
+            {items.map((item) => (
+              <MovieCard key={`${item.isTV ? "tv" : "m"}-${item.id}`} {...item} />
             ))}
           </div>
 
@@ -149,3 +142,4 @@ const enriched = await Promise.all(
     </div>
   );
 }
+

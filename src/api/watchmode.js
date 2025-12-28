@@ -1,4 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
 
 export const getWatchmodeId = async (title, year, tmdbId) => {
   try {

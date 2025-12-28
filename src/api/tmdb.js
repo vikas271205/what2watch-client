@@ -1,9 +1,5 @@
-const API_BASE = process.env.REACT_APP_API_BASE_URL;
+import API_BASE from "../utils/api";
 
-export const fetchTrendingMovies = async () => {
-  const res = await fetch(`${API_BASE}/api/tmdb/trending`);
-  return await res.json();
-};
 
 export const fetchGenres = async () => {
   const res = await fetch(`${API_BASE}/api/tmdb/genres`);
