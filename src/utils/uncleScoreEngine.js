@@ -74,9 +74,9 @@ export function computeUncleScore({
         // -----------------------------
         let badge = "Mixed";
 
-        if (baseScore >= 85) badge = "Must Watch";
+        if (baseScore >= 80) badge = "Must Watch";
         else if (baseScore >= 70) badge = "Worth Watching";
-        else if (baseScore >= 55) badge = "Mixed";
+        else if (baseScore >= 50) badge = "Mixed";
         else badge = "Skip";
 
         // -----------------------------

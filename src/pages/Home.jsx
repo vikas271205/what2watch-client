@@ -1,33 +1,42 @@
-import TrendingSection from "../components/TrendingSection";
-import Footer from "../components/Footer";
-import TVSection from "../components/TVSection";
-import HollywoodSection from "../components/HollywoodSection";
-import BollywoodSection from "../components/BollywoodSection";
 import Hero from "../components/Hero";
 import ContinueWatchingSection from "../components/ContinueWatchingSection";
+import TrendingSection from "../components/TrendingSection";
 import MoviesForYouSection from "../components/MoviesForYouSection";
-import HiddenGemSection from "../components/HiddenGemSection";
+import TVSection from "../components/TVSection";
 import NowPlayingIndiaSection from "../components/NowPlayingIndiaSection";
+import HiddenGemSection from "../components/HiddenGemSection";
+import Footer from "../components/Footer";
 
 function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-background">
+      {/* Hero */}
       <Hero />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <div className="space-y-12 sm:space-y-16">
-          <ContinueWatchingSection/>
-          
-          <TrendingSection />
-          <TVSection />    
-          <NowPlayingIndiaSection/>
-          <MoviesForYouSection/>  
-          <HiddenGemSection />    
-          <HollywoodSection />
-          <BollywoodSection />
-        </div>
+      {/* Content */}
+      <div className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-16">
+
+        {/* Personal utility */}
+        <ContinueWatchingSection />
+
+        {/* Primary discovery */}
+        <TrendingSection />
+
+        {/* Personalized */}
+        <MoviesForYouSection />
+
+        {/* TV only */}
+        <TVSection />
+
+        {/* Contextual */}
+        <NowPlayingIndiaSection />
+
+        {/* Editorial */}
+        <HiddenGemSection />
+
       </div>
 
+      <Footer />
     </main>
   );
 }

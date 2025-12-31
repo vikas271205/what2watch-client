@@ -658,14 +658,33 @@ useEffect(() => {
                     <div className="py-8">
                         {streamingSources.length > 0 && <WatchOnSection sources={streamingSources} />}
                         <div className="border-b border-gray-700 mb-6">
-                            <nav className="flex space-x-2 sm:space-x-4">
-                                <TabButton active={activeTab === 'synopsis'} onClick={() => setActiveTab('synopsis')}>Details</TabButton>
-                                <TabButton active={activeTab === 'seasons'} onClick={() => setActiveTab('seasons')}>Seasons</TabButton>
-                                <TabButton active={activeTab === 'cast'} onClick={() => setActiveTab('cast')}>Cast & Crew</TabButton>
-                                <TabButton active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>Comments</TabButton>
-                                <TabButton active={activeTab === 'related'} onClick={() => setActiveTab('related')}>Related</TabButton>
-                            </nav>
+                        <nav
+                            className="
+                            flex gap-2 sm:gap-4
+                            overflow-x-auto
+                            no-scrollbar
+                            whitespace-nowrap
+                            pb-2
+                            "
+                        >
+                            <TabButton active={activeTab === 'synopsis'} onClick={() => setActiveTab('synopsis')}>
+                            Details
+                            </TabButton>
+                            <TabButton active={activeTab === 'seasons'} onClick={() => setActiveTab('seasons')}>
+                            Seasons
+                            </TabButton>
+                            <TabButton active={activeTab === 'cast'} onClick={() => setActiveTab('cast')}>
+                            Cast & Crew
+                            </TabButton>
+                            <TabButton active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>
+                            Comments
+                            </TabButton>
+                            <TabButton active={activeTab === 'related'} onClick={() => setActiveTab('related')}>
+                            Related
+                            </TabButton>
+                        </nav>
                         </div>
+
                         <AnimatePresence mode="wait">
                             <motion.div key={activeTab} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -10, opacity: 0 }} transition={{ duration: 0.2 }}>
                                 {activeTab === 'synopsis' && (
