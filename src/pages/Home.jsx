@@ -36,7 +36,7 @@ function Home() {
 
       </div>
 
-      <Footer />
+      
     </main>
   );
 }
