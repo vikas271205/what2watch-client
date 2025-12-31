@@ -17,6 +17,8 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 export default function MoviesForYouSection({ maxItems = 20 }) {
   const [items, setItems] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  
   const watchHistory = getWatchHistory();
   const scrollRef = useRef(null);
 
@@ -180,7 +182,7 @@ const scroll = (dir) => {
           // Fallback random mix
           console.log("[MFY] No history, fetching random mix");
           const [movies, tvs] = await Promise.all([fetchRandomMovies(), fetchRandomTV()]);
-          finalResults = shuffleArray([...movies.slice(0, 10), ...tvs.slice(0, 10)]);
+          finalResults = shuffleArray([...movies.slice(0, 12), ...tvs.slice(0, 12)]);
         } else {
           // Personalized
           console.log("[MFY] History found, computing personalized results");
@@ -189,7 +191,7 @@ const scroll = (dir) => {
           if (topGenres.length === 0) {
             // fallback
             const [movies, tvs] = await Promise.all([fetchRandomMovies(), fetchRandomTV()]);
-            finalResults = shuffleArray([...movies.slice(0, 10), ...tvs.slice(0, 10)]);
+            finalResults = shuffleArray([...movies.slice(0, 12), ...tvs.slice(0, 12)]);
           } else {
             // fetch per top genre
             const movieRecs = [];
@@ -199,10 +201,10 @@ const scroll = (dir) => {
                 fetchMoviesByGenreKeyword(g),
                 fetchTVByGenreKeyword(g),
               ]);
-              movieRecs.push(...(mByG || []).slice(0, 10));
-              tvRecs.push(...(tByG || []).slice(0, 10));
+              movieRecs.push(...(mByG || []).slice(0, 12));
+              tvRecs.push(...(tByG || []).slice(0, 12));
             }
-            finalResults = shuffleArray([...movieRecs.slice(0, 10), ...tvRecs.slice(0, 10)]);
+            finalResults = shuffleArray([...movieRecs.slice(0, 12), ...tvRecs.slice(0, 12)]);
           }
         }
 
@@ -239,114 +241,89 @@ const scroll = (dir) => {
     // refresh whenever profileHash changes (watch history changed)
   }, [profileHash, maxItems]);
 
-  // ---- 8. UI ----
-  if (loading || !items) {
-    return (
-      <div className="text-white px-4 sm:px-6 lg:px-8">
-        <h2 className="text-xl font-bold mb-3">Movies For You</h2>
-        <div className="flex gap-4 overflow-x-auto">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="w-40 h-56 bg-gray-800 animate-pulse rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!items || items.length === 0) return null;
-
-  // ---- 8. UI ----
+// ---- 8. UI ----
+if (loading || !items) {
   return (
-    <div className="relative group mb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <TrendingUp 
-            className="text-gray-700 dark:text-indigo-400"
-            size={28}
-          />
-          <h2 className="text-2xl font-bold text-gray-800 dark:bg-gradient-to-r dark:from-indigo-400 dark:to-purple-500 dark:bg-clip-text dark:text-transparent">
-            Movies For You
-          </h2>
-        </div>
-      </div>
+    <section className="px-4 sm:px-6 lg:px-8">
+      <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
+        Movies For You
+      </h2>
 
-      {/* LOADING (Shimmer) */}
-      {loading ? (
-        <div className="grid grid-flow-col auto-cols-[calc(100%/2.2)] sm:auto-cols-[calc(100%/3.2)] lg:auto-cols-[calc(100%/5.2)] gap-4 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <div 
-              key={i} 
-              className="w-full h-56 bg-gray-800 rounded-lg animate-pulse"
-            />
-          ))}
-        </div>
-      ) : items.length > 0 ? (
-        <div className="relative">
-          {/* Scrollable Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
           <div
-            ref={scrollRef}
-            className="grid grid-flow-col auto-cols-[calc(100%/2.2)]
-                      sm:auto-cols-[calc(100%/3.2)]
-                      lg:auto-cols-[calc(100%/5.2)]
-                      gap-4 overflow-x-auto no-scrollbar py-4 scroll-smooth"
-          >
-            {items.map((item) => {
-              const isTV = !!item.name;
-              return (
-                <Link
-                  key={`${isTV ? "tv" : "movie"}-${item.id}`}
-                  to={isTV ? `/tv/${item.id}` : `/movie/${item.id}`}
-                >
-                  <MovieCard
-                    id={item.id}
-                    title={item.title || item.name}
-                    imageUrl={
-                      item.poster_path
-                        ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
-                        : null
-                    }
-                    tmdbRating={
-                      item.vote_average ? item.vote_average.toFixed(1) : undefined
-                    }
-                    isTV={isTV}
-                  />
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* SCROLL BUTTONS */}
-          <button
-            onClick={() => scroll("left")}
-            className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-4
-                       bg-white/80 dark:bg-white/10 backdrop-blur-sm p-2 rounded-full
-                       text-gray-800 dark:text-white opacity-0 group-hover:opacity-100
-                       transition-opacity duration-300 hover:bg-white 
-                       dark:hover:bg-white/20 z-30 shadow-md"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={24} />
-          </button>
-
-          <button
-            onClick={() => scroll("right")}
-            className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-4
-                       bg-white/80 dark:bg-white/10 backdrop-blur-sm p-2 rounded-full
-                       text-gray-800 dark:text-white opacity-0 group-hover:opacity-100
-                       transition-opacity duration-300 hover:bg-white 
-                       dark:hover:bg-white/20 z-30 shadow-md"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </div>
-      ) : (
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          No recommendations available right now.
-        </p>
-      )}
-    </div>
+            key={i}
+            className="w-full aspect-[2/3] bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse"
+          />
+        ))}
+      </div>
+    </section>
   );
+}
+
+if (!items || items.length === 0) return null;
+
+return (
+  <section className="px-4 sm:px-6 lg:px-8 mb-16">
+    {/* Header */}
+    <div className="mb-6">
+      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+        Movies For You
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Based on what you’ve been watching
+      </p>
+    </div>
+
+    {/* Static Grid */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+  
+      {items.slice(0,12).map((item,index) => {
+const isTV = !!item.name;
+const hideOnMobile = index >= 4 && !showAll;
+
+return (
+  <Link
+    key={`${isTV ? "tv" : "movie"}-${item.id}`}
+    to={isTV ? `/tv/${item.id}` : `/movie/${item.id}`}
+    className={hideOnMobile ? "hidden md:block" : ""}
+  >
+    <MovieCard
+      id={item.id}
+      title={item.title || item.name}
+      imageUrl={
+        item.poster_path
+          ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
+          : null
+      }
+      tmdbRating={
+        item.vote_average ? item.vote_average.toFixed(1) : undefined
+      }
+      isTV={isTV}
+    />
+  </Link>
+);
+
+      })}
+    </div>
+{!showAll && items.length > 4 && (
+  <div className="mt-6 text-center block md:hidden">
+    <button
+      onClick={() => setShowAll(true)}
+      className="px-5 py-2 text-sm font-medium
+                 text-indigo-600 dark:text-indigo-400
+                 border border-indigo-500/30
+                 rounded-full
+                 hover:bg-indigo-500/10
+                 transition"
+    >
+      Show more
+    </button>
+  </div>
+)}
+
+  </section>
+);
+
 
 }

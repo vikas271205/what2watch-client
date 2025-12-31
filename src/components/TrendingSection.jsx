@@ -78,48 +78,79 @@ function TrendingSection() {
     }
   };
 
-  return (
-    <div className="relative group">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <TrendingUp className="text-gray-700 dark:text-indigo-400" size={28} />
-          {/* --- 2. Title updated --- */}
-          <h2 className="text-2xl font-bold text-gray-800 dark:bg-gradient-to-r dark:from-indigo-400 dark:to-purple-500 dark:bg-clip-text dark:text-transparent">
-            Top 10 Movies Today
-          </h2>
-        </div>
-        <Link 
-          to="/trending" 
-          className="text-xs font-semibold bg-gray-100 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-200 transition-colors dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-        >
-          See All
-        </Link>
+return (
+  <section className="relative group">
+    {/* Header */}
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <TrendingUp
+          className="text-indigo-500 dark:text-indigo-400"
+          size={30}
+        />
+        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+          Top 10 Movies Today
+        </h2>
       </div>
 
-      {isSectionLoading ? (
-        <div className="grid grid-flow-col auto-cols-[calc(100%/2.2)] sm:auto-cols-[calc(100%/3.2)] lg:auto-cols-[calc(100%/5.2)] gap-4 overflow-hidden">
-          {[...Array(6)].map((_, i) => <ShimmerCard key={i} />)}
-        </div>
-      ) : movies.length > 0 ? (
-        <div className="relative">
-          {/* --- 3. Clean carousel layout without numbers --- */}
-          <div ref={scrollRef} className="grid grid-flow-col auto-cols-[calc(100%/2.2)] sm:auto-cols-[calc(100%/3.2)] lg:auto-cols-[calc(100%/5.2)] gap-4 overflow-x-auto no-scrollbar py-4 scroll-smooth">
-            {movies.map((movie) => (
-              <MovieCard key={movie.id} {...movie} />
-            ))}
-          </div>
-          <button onClick={() => scroll('left')} className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-4 bg-white/80 dark:bg-white/10 backdrop-blur-sm p-2 rounded-full text-gray-800 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white dark:hover:bg-white/20 z-30 shadow-md" aria-label="Scroll left">
-            <ChevronLeft size={24} />
-          </button>
-          <button onClick={() => scroll('right')} className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-4 bg-white/80 dark:bg-white/10 backdrop-blur-sm p-2 rounded-full text-gray-800 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white dark:hover:bg-white/20 z-30 shadow-md" aria-label="Scroll right">
-            <ChevronRight size={24} />
-          </button>
-        </div>
-      ) : (
-        <p className="text-gray-500 dark:text-gray-400 text-sm">No trending movies found at the moment.</p>
-      )}
+      <Link
+        to="/trending"
+        className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        See all
+      </Link>
     </div>
-  );
+
+    {/* Content */}
+    {isSectionLoading ? (
+      <div className="grid grid-flow-col auto-cols-[70%] sm:auto-cols-[40%] lg:auto-cols-[22%] gap-6 overflow-hidden">
+        {[...Array(6)].map((_, i) => (
+          <ShimmerCard key={i} />
+        ))}
+      </div>
+    ) : movies.length > 0 ? (
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          className="grid grid-flow-col auto-cols-[70%] sm:auto-cols-[40%] lg:auto-cols-[22%]
+                     gap-6 overflow-x-auto no-scrollbar py-6 scroll-smooth"
+        >
+          {movies.map((movie) => (
+            <MovieCard key={movie.id} {...movie} />
+          ))}
+        </div>
+
+        {/* Left Arrow */}
+        <button
+          onClick={() => scroll("left")}
+          className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-6
+                     bg-black/70 backdrop-blur-md p-3 rounded-full text-white
+                     opacity-0 group-hover:opacity-100 transition-all duration-300
+                     hover:bg-black z-30"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft size={26} />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scroll("right")}
+          className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-6
+                     bg-black/70 backdrop-blur-md p-3 rounded-full text-white
+                     opacity-0 group-hover:opacity-100 transition-all duration-300
+                     hover:bg-black z-30"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={26} />
+        </button>
+      </div>
+    ) : (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        No trending movies found at the moment.
+      </p>
+    )}
+  </section>
+);
+
 }
 
 export default TrendingSection;
