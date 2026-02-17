@@ -1,0 +1,248 @@
+[debug] [2025-12-31T17:31:47.375Z] ----------------------------------------------------------------------
+[debug] [2025-12-31T17:31:47.376Z] Command:       /home/mando/.nvm/versions/node/v20.19.6/bin/node /home/mando/.nvm/versions/node/v20.19.6/bin/firebase deploy
+[debug] [2025-12-31T17:31:47.377Z] CLI Version:   14.27.0
+[debug] [2025-12-31T17:31:47.377Z] Platform:      linux
+[debug] [2025-12-31T17:31:47.377Z] Node Version:  v20.19.6
+[debug] [2025-12-31T17:31:47.377Z] Time:          Wed Dec 31 2025 23:01:47 GMT+0530 (India Standard Time)
+[debug] [2025-12-31T17:31:47.377Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-12-31T17:31:47.378Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2025-12-31T17:31:47.506Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-31T17:31:47.506Z] > authorizing via signed-in user (vikasjakhar271205@gmail.com)
+[debug] [2025-12-31T17:31:47.506Z] [iam] checking project what2watch-271205 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-12-31T17:31:47.507Z] Checked if tokens are valid: false, expires at: 1766939671068
+[debug] [2025-12-31T17:31:47.507Z] Checked if tokens are valid: false, expires at: 1766939671068
+[debug] [2025-12-31T17:31:47.507Z] > refreshing access token with scopes: []
+[debug] [2025-12-31T17:31:47.507Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-12-31T17:31:47.508Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-12-31T17:31:47.875Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-12-31T17:31:47.875Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-12-31T17:31:47.882Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions [none]
+[debug] [2025-12-31T17:31:47.882Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions x-goog-quota-user=projects/what2watch-271205
+[debug] [2025-12-31T17:31:47.882Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-31T17:31:48.357Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2025-12-31T17:31:48.357Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2025-12-31T17:31:49.521Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions 200
+[debug] [2025-12-31T17:31:49.522Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-31T17:31:49.522Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:49.523Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:49.523Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 [none]
+[debug] [2025-12-31T17:31:50.105Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 200
+[debug] [2025-12-31T17:31:50.106Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 {"projectId":"what2watch-271205","projectNumber":"1002672802486","displayName":"what2watch","name":"projects/what2watch-271205","resources":{"hostingSite":"what2watch-271205"},"state":"ACTIVE","etag":"1_269e5984-09ed-4a43-8999-531c896c3338"}
+[info] 
+[info] === Deploying to 'what2watch-271205'...
+[info] 
+[info] i  deploying firestore, hosting 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2025-12-31T17:31:50.111Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:50.111Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:50.111Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) [none]
+[debug] [2025-12-31T17:31:50.637Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) 200
+[debug] [2025-12-31T17:31:50.637Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) {"name":"projects/what2watch-271205/databases/(default)","uid":"dc1d0936-b084-401e-99c5-e37f479ec755","createTime":"2025-07-03T09:10:56.669789Z","updateTime":"2025-07-03T09:10:56.669789Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2025-12-31T16:31:50.547244Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"INnI3c+t6JEDMMK/xPetoI4D"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2025-12-31T17:31:50.639Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:50.639Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:50.639Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test [none]
+[debug] [2025-12-31T17:31:50.640Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test [omitted]
+[debug] [2025-12-31T17:31:52.300Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test 200
+[debug] [2025-12-31T17:31:52.300Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2025-12-31T17:31:52.304Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:52.305Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:31:52.305Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions [none]
+[debug] [2025-12-31T17:31:52.305Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-12-31T17:31:54.754Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions 200
+[debug] [2025-12-31T17:31:54.754Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions {"name":"projects/1002672802486/sites/what2watch-271205/versions/b1c6f4b14eefeb88","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-12-31T17:34:05.389Z] ----------------------------------------------------------------------
+[debug] [2025-12-31T17:34:05.390Z] Command:       /home/mando/.nvm/versions/node/v20.19.6/bin/node /home/mando/.nvm/versions/node/v20.19.6/bin/firebase deploy
+[debug] [2025-12-31T17:34:05.391Z] CLI Version:   14.27.0
+[debug] [2025-12-31T17:34:05.391Z] Platform:      linux
+[debug] [2025-12-31T17:34:05.391Z] Node Version:  v20.19.6
+[debug] [2025-12-31T17:34:05.391Z] Time:          Wed Dec 31 2025 23:04:05 GMT+0530 (India Standard Time)
+[debug] [2025-12-31T17:34:05.391Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-12-31T17:34:05.494Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-31T17:34:05.494Z] > authorizing via signed-in user (vikasjakhar271205@gmail.com)
+[debug] [2025-12-31T17:34:05.494Z] [iam] checking project what2watch-271205 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-12-31T17:34:05.495Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:05.495Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:05.495Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions [none]
+[debug] [2025-12-31T17:34:05.495Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions x-goog-quota-user=projects/what2watch-271205
+[debug] [2025-12-31T17:34:05.495Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-31T17:34:07.146Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions 200
+[debug] [2025-12-31T17:34:07.146Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/what2watch-271205:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-12-31T17:34:07.147Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:07.147Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:07.148Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 [none]
+[debug] [2025-12-31T17:34:07.672Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 200
+[debug] [2025-12-31T17:34:07.672Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/what2watch-271205 {"projectId":"what2watch-271205","projectNumber":"1002672802486","displayName":"what2watch","name":"projects/what2watch-271205","resources":{"hostingSite":"what2watch-271205"},"state":"ACTIVE","etag":"1_269e5984-09ed-4a43-8999-531c896c3338"}
+[info] 
+[info] === Deploying to 'what2watch-271205'...
+[info] 
+[info] i  deploying firestore, hosting 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2025-12-31T17:34:07.677Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:07.677Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:07.677Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) [none]
+[debug] [2025-12-31T17:34:08.171Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) 200
+[debug] [2025-12-31T17:34:08.171Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) {"name":"projects/what2watch-271205/databases/(default)","uid":"dc1d0936-b084-401e-99c5-e37f479ec755","createTime":"2025-07-03T09:10:56.669789Z","updateTime":"2025-07-03T09:10:56.669789Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2025-12-31T16:34:08.080077Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IOP0p5Gu6JEDMMK/xPetoI4D"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2025-12-31T17:34:08.173Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:08.173Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:08.173Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test [none]
+[debug] [2025-12-31T17:34:08.173Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test [omitted]
+[debug] [2025-12-31T17:34:09.193Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test 200
+[debug] [2025-12-31T17:34:09.193Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/what2watch-271205:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2025-12-31T17:34:09.197Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:09.197Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:34:09.198Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions [none]
+[debug] [2025-12-31T17:34:09.198Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-12-31T17:34:11.199Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions 200
+[debug] [2025-12-31T17:34:11.199Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions {"name":"projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-12-31T17:36:22.926Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:22.926Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:22.927Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases pageSize=10&pageToken=
+[debug] [2025-12-31T17:36:24.490Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases 200
+[debug] [2025-12-31T17:36:24.490Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases {"releases":[{"name":"projects/what2watch-271205/releases/cloud.firestore","rulesetName":"projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2","createTime":"2025-07-03T09:11:04.952682Z","updateTime":"2025-12-28T15:35:23.993293Z"}]}
+[debug] [2025-12-31T17:36:24.490Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:24.490Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:24.491Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2 [none]
+[debug] [2025-12-31T17:36:25.807Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2 200
+[debug] [2025-12-31T17:36:25.807Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2 [omitted]
+[info] i  firestore: latest version of firestore.rules already up to date, skipping upload... 
+[info] i  firestore: deploying indexes... 
+[debug] [2025-12-31T17:36:25.810Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:25.810Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:25.810Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2025-12-31T17:36:26.231Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2025-12-31T17:36:26.231Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/indexes {"indexes":[{"name":"projects/what2watch-271205/databases/(default)/collectionGroups/reviews/indexes/CICAgJim14AK","queryScope":"COLLECTION","fields":[{"fieldPath":"mediaType","order":"ASCENDING"},{"fieldPath":"mediaId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/what2watch-271205/databases/(default)/collectionGroups/searches/indexes/CICAgOjXh4EK","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"timestamp","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/what2watch-271205/databases/(default)/collectionGroups/reviews/indexes/CICAgJiUpoMK","queryScope":"COLLECTION","fields":[{"fieldPath":"movieId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"}]}
+[debug] [2025-12-31T17:36:26.232Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:26.232Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:26.232Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2025-12-31T17:36:26.412Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2025-12-31T17:36:26.412Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/what2watch-271205/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[debug] [2025-12-31T17:36:26.412Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:26.412Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:26.412Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) [none]
+[debug] [2025-12-31T17:36:26.524Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) 200
+[debug] [2025-12-31T17:36:26.524Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/what2watch-271205/databases/(default) {"name":"projects/what2watch-271205/databases/(default)","uid":"dc1d0936-b084-401e-99c5-e37f479ec755","createTime":"2025-07-03T09:10:56.669789Z","updateTime":"2025-07-03T09:10:56.669789Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2025-12-31T16:36:26.453607Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IPnHpdOu6JEDMMK/xPetoI4D"}
+[info] i  firestore: The following indexes are defined in your project but are not present in your firestore indexes file:
+	(reviews) -- (mediaType,ASCENDING) (mediaId,ASCENDING) (createdAt,DESCENDING)  -- Density:SPARSE_ALL 
+	(reviews) -- (movieId,ASCENDING) (createdAt,DESCENDING)  -- Density:SPARSE_ALL  
+[debug] [2025-12-31T17:36:46.511Z] Skipping existing index: {"collectionGroup":"searches","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"timestamp","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}]}
+[info] ✔  firestore: deployed indexes in firestore.indexes.json successfully for (default) database 
+[info] i  hosting[what2watch-271205]: beginning deploy... 
+[info] i  hosting[what2watch-271205]: found 13 files in build 
+[debug] [2025-12-31T17:36:46.527Z] [hosting] uploading with 200 concurrency
+[debug] [2025-12-31T17:36:46.965Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:46.965Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:46.966Z] [hosting] hash cache [YnVpbGQ] stored for 13 files
+[debug] [2025-12-31T17:36:46.966Z] [hosting][hash queue][FINAL] {"max":434,"min":3,"avg":40.46153846153846,"active":0,"complete":13,"success":13,"errored":0,"retried":0,"total":13,"elapsed":437}
+[debug] [2025-12-31T17:36:46.966Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff:populateFiles [none]
+[debug] [2025-12-31T17:36:46.966Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff:populateFiles {"files":{"/stars.svg":"03d344fb1cc5ceceb2b3525d53332a1ed4094d4525091776918870e531a02e4c","/robots.txt":"2544ca049f223a42bff01f72ad930a5edba75bbb7199d0f8430a02ff5aca16ec","/manifest.json":"c12dd51ed2c8ac94acf3c25d1f0c541d667c90c8557ac43cb42d0a6df086bd7f","/index.html":"1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e","/asset-manifest.json":"4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756","/static/js/main.d255253b.js.LICENSE.txt":"522cdbb402af95dfc4c70eb060cb058d78adc13328299c3778c77b18d4a89671","/favicon.ico":"a4d4b9bf0f88c6e79b6d18409ebe9ec1a0097537c90926736bfaf9461cad87a4","/static/css/main.6b79181a.css.map":"4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510","/static/css/main.6b79181a.css":"d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03","/logo192.png":"844eaae7287b216c39a180478aec0fdf7fb14d1eb3701b72c3d7b597e0e48ba5","/logo512.png":"fbd3cf21506d7061dfe092dc168097d43671d25675b50fb8ae34c84116ac4d62","/static/js/main.d255253b.js":"88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df","/static/js/main.d255253b.js.map":"57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f"}}
+[debug] [2025-12-31T17:36:49.215Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff:populateFiles 200
+[debug] [2025-12-31T17:36:49.216Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff:populateFiles {"uploadRequiredHashes":["4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756","57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f","d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03","1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e","88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df","4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files"}
+[debug] [2025-12-31T17:36:49.217Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.217Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.217Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.217Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.218Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.219Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.219Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:49.219Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756 [none]
+[debug] [2025-12-31T17:36:49.219Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756 [stream]
+[debug] [2025-12-31T17:36:49.221Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f [none]
+[debug] [2025-12-31T17:36:49.221Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f [stream]
+[debug] [2025-12-31T17:36:49.223Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03 [none]
+[debug] [2025-12-31T17:36:49.223Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03 [stream]
+[debug] [2025-12-31T17:36:49.225Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e [none]
+[debug] [2025-12-31T17:36:49.225Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e [stream]
+[debug] [2025-12-31T17:36:49.227Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df [none]
+[debug] [2025-12-31T17:36:49.227Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df [stream]
+[debug] [2025-12-31T17:36:49.228Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510 [none]
+[debug] [2025-12-31T17:36:49.228Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510 [stream]
+[debug] [2025-12-31T17:36:49.230Z] [hosting][populate queue][FINAL] {"max":2254,"min":2254,"avg":2254,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":2266}
+[debug] [2025-12-31T17:36:49.230Z] [hosting] uploads queued: 6
+[debug] [2025-12-31T17:36:50.723Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510 200
+[debug] [2025-12-31T17:36:50.723Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4f2fb9048812cbb3c4ea7e984ee9f9c6265e15623dfbd9d710a685f99faa5510 [stream]
+[debug] [2025-12-31T17:36:50.836Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03 200
+[debug] [2025-12-31T17:36:50.836Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/d0584f68fb2602eff1b64684d9f9a96d57ef32af1cb4747c9687183e9ec47c03 [stream]
+[debug] [2025-12-31T17:36:50.843Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756 200
+[debug] [2025-12-31T17:36:50.844Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/4db45cd259e9179fbf0ed6239999b7e909b65df7ad467b05a098a3038dd03756 [stream]
+[debug] [2025-12-31T17:36:51.095Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e 200
+[debug] [2025-12-31T17:36:51.095Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/1fa8431e947b31fb4a3efc6e5c0be879906f27d527f2d32ecaf78be95188561e [stream]
+[debug] [2025-12-31T17:36:51.670Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df 200
+[debug] [2025-12-31T17:36:51.670Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/88071f4c70eed5acbbae2160617ee1e46d50b8a4eb7b9a753b054419064270df [stream]
+[debug] [2025-12-31T17:36:52.790Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f 200
+[debug] [2025-12-31T17:36:52.790Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/what2watch-271205/versions/3d049addf2c0cbff/files/57bba04e29932cbb3143ec66a50f9122fba52abc6511032b2993b70f7ed4ff3f [stream]
+[debug] [2025-12-31T17:36:52.790Z] [hosting][upload queue][FINAL] {"max":3573,"min":1504,"avg":2108.6666666666665,"active":0,"complete":6,"success":6,"errored":0,"retried":0,"total":6,"elapsed":3574}
+[info] ✔  hosting[what2watch-271205]: file upload complete 
+[debug] [2025-12-31T17:36:52.791Z] [hosting] deploy completed after 6277ms
+[debug] [2025-12-31T17:36:52.791Z] [rules] releasing cloud.firestore/(default) with ruleset projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2
+[debug] [2025-12-31T17:36:52.792Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:52.792Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:52.792Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases/cloud.firestore/(default) [none]
+[debug] [2025-12-31T17:36:52.792Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases/cloud.firestore/(default) {"release":{"name":"projects/what2watch-271205/releases/cloud.firestore/(default)","rulesetName":"projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2"}}
+[debug] [2025-12-31T17:36:59.457Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases/cloud.firestore/(default) 200
+[debug] [2025-12-31T17:36:59.457Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/what2watch-271205/releases/cloud.firestore/(default) {"name":"projects/what2watch-271205/releases/cloud.firestore","rulesetName":"projects/what2watch-271205/rulesets/559a5506-2ae0-4e42-944b-b0817a4907d2","createTime":"2025-07-03T09:11:04.952682Z","updateTime":"2025-12-31T17:36:59.235822Z"}
+[debug] [2025-12-31T17:36:59.457Z] [rules] updated release projects/what2watch-271205/releases/cloud.firestore
+[info] ✔  firestore: released rules firestore.rules to cloud.firestore 
+[debug] [2025-12-31T17:36:59.458Z] [
+  {
+    "config": {
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "site": "what2watch-271205"
+    },
+    "version": "projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff"
+  }
+]
+[info] i  hosting[what2watch-271205]: finalizing version... 
+[debug] [2025-12-31T17:36:59.460Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:59.460Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:36:59.460Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions/3d049addf2c0cbff updateMask=status%2Cconfig
+[debug] [2025-12-31T17:36:59.460Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions/3d049addf2c0cbff {"status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]}}
+[debug] [2025-12-31T17:37:01.574Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions/3d049addf2c0cbff 200
+[debug] [2025-12-31T17:37:01.575Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/versions/3d049addf2c0cbff {"name":"projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2025-12-31T17:34:10.828896Z","createUser":{"email":"vikasjakhar271205@gmail.com"},"finalizeTime":"2025-12-31T17:37:01.224493Z","finalizeUser":{"email":"vikasjakhar271205@gmail.com"}}
+[debug] [2025-12-31T17:37:01.575Z] [hosting] finalized version for what2watch-271205:[object Object]
+[info] ✔  hosting[what2watch-271205]: version finalized 
+[info] i  hosting[what2watch-271205]: releasing new version... 
+[debug] [2025-12-31T17:37:01.575Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:37:01.575Z] Checked if tokens are valid: true, expires at: 1767205906876
+[debug] [2025-12-31T17:37:01.576Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/channels/live/releases versionName=projects%2F1002672802486%2Fsites%2Fwhat2watch-271205%2Fversions%2F3d049addf2c0cbff
+[debug] [2025-12-31T17:37:01.576Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/channels/live/releases {}
+[debug] [2025-12-31T17:37:02.037Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/channels/live/releases 200
+[debug] [2025-12-31T17:37:02.037Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/what2watch-271205/channels/live/releases {"name":"projects/1002672802486/sites/what2watch-271205/channels/live/releases/1767202621275000","version":{"name":"projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2025-12-31T17:34:10.828896Z","createUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"},"finalizeTime":"2025-12-31T17:37:01.224493Z","finalizeUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"}},"type":"DEPLOY","releaseTime":"2025-12-31T17:37:01.275Z","releaseUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"}}
+[debug] [2025-12-31T17:37:02.037Z] [hosting] release: {"name":"projects/1002672802486/sites/what2watch-271205/channels/live/releases/1767202621275000","version":{"name":"projects/1002672802486/sites/what2watch-271205/versions/3d049addf2c0cbff","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2025-12-31T17:34:10.828896Z","createUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"},"finalizeTime":"2025-12-31T17:37:01.224493Z","finalizeUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"}},"type":"DEPLOY","releaseTime":"2025-12-31T17:37:01.275Z","releaseUser":{"email":"vikasjakhar271205@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJfQmEUS6-oUMb-IEvHJgqaQLnD1j12DqU3Hk_7koc2Ik92yA=mo"}}
+[info] ✔  hosting[what2watch-271205]: release complete 
+[info] 
+[info] ✔  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/what2watch-271205/overview
+[info] Hosting URL: https://what2watch-271205.web.app
+[debug] [2025-12-31T17:37:12.052Z] Error: Timed out.
+    at Timeout._onTimeout (/home/mando/.nvm/versions/node/v20.19.6/lib/node_modules/firebase-tools/lib/utils.js:275:49)
+    at listOnTimeout (node:internal/timers:581:17)
+    at process.processTimers (node:internal/timers:519:7)
+[error] 
+[error] Error: An unexpected error has occurred.
