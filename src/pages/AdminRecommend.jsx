@@ -141,7 +141,7 @@ export default function AdminRecommend() {
       showToast(`Failed to add to UNCLE's PICK: ${err.message}`, true);
     }
   };
-
+  
   if (loadingAuth) return <p className="p-4 text-white text-center">Checking authentication...</p>;
 
   if (!user || !isAdmin) {
@@ -153,6 +153,7 @@ export default function AdminRecommend() {
   }
 
 return (
+  
   <div className="min-h-screen bg-black text-white p-6">
     <div className="max-w-4xl mx-auto">
 
@@ -225,7 +226,7 @@ return (
           );
         })}
       </div>
-
+      
       {results.length === 0 && !loading && (
         <p className="text-gray-500 mt-6">
           No results
@@ -233,6 +234,15 @@ return (
       )}
 
     </div>
+    {toast.show && (
+      <div
+        className={`fixed bottom-6 right-6 px-4 py-2 rounded shadow-lg text-sm font-medium ${
+          toast.isError ? "bg-red-600" : "bg-green-600"
+        }`}
+      >
+        {toast.message}
+      </div>
+    )}
   </div>
 );
 

@@ -33,31 +33,50 @@ export default function UnclesPick() {
   }, []);
 
   /* ------------------ Fetch ------------------ */
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/api/recommend/all`);
-        const data = await res.json();
-        setItems(data);
-      } catch (err) {
-        console.error(err);
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  /* ------------------ Helpers ------------------ */
-  const getTime = (item) => {
-    if (!item.createdAt) return 0;
-    if (item.createdAt.seconds) return item.createdAt.seconds * 1000;
-    if (item.createdAt instanceof Date) return item.createdAt.getTime();
-    if (typeof item.createdAt === "number") return item.createdAt;
-    return 0;
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/recommend/all`);
+      const data = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error(err);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   };
+  fetchData();
+}, []);
+  /* ------------------ Helpers ------------------ */
+const getTime = (item) => {
+  const value = item.createdAt;
+
+  if (!value) return 0;
+
+  // Firestore timestamp coming as _seconds
+  if (typeof value === "object" && value._seconds !== undefined) {
+    return value._seconds * 1000;
+  }
+
+  // Firestore timestamp normal (future safe)
+  if (typeof value === "object" && value.seconds !== undefined) {
+    return value.seconds * 1000;
+  }
+
+  // Numeric timestamp
+  if (typeof value === "number") {
+    return value;
+  }
+
+  // If stored as string number
+  if (typeof value === "string" && !isNaN(value)) {
+    return Number(value);
+  }
+
+  return 0;
+};
 
   const filteredItems = useMemo(() => {
     let list = [...items];
@@ -83,19 +102,28 @@ export default function UnclesPick() {
       list = list.filter((i) => i.language === selectedLanguage);
     }
 
-    list.sort((a, b) => {
-      if (sortOption === "highest")
-        return (b.rating || 0) - (a.rating || 0);
-      if (sortOption === "lowest")
-        return (a.rating || 0) - (b.rating || 0);
+list.sort((a, b) => {
+  if (sortOption === "highest") {
+    return (b.rating || 0) - (a.rating || 0);
+  }
 
-      const timeA = getTime(a);
-      const timeB = getTime(b);
+  if (sortOption === "lowest") {
+    return (a.rating || 0) - (b.rating || 0);
+  }
 
-      if (sortOption === "latest") return timeB - timeA;
-      if (sortOption === "oldest") return timeA - timeB;
-      return 0;
-    });
+  const timeA = getTime(a);
+  const timeB = getTime(b);
+
+  if (sortOption === "latest") {
+    return timeB - timeA;
+  }
+
+  if (sortOption === "oldest") {
+    return timeA - timeB;
+  }
+
+  return 0;
+});
 
     return list;
   }, [items, selectedType, selectedGenre, selectedLanguage, sortOption]);
