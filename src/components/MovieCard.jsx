@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { computeUncleScore } from "../utils/uncleScoreEngine";
 import API_BASE from "../utils/api";
 import ScoreCircle from "./ScoreCircle";
+import AddToListModal from "./AddToListModal";
 
 function MovieCard({
   id,
@@ -35,7 +36,7 @@ function MovieCard({
   const cardRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
-
+  const [showModal, setShowModal] = useState(false);
   // ---------------------------
   // ALWAYS COMPUTE UNCLE SCORE HERE
   // ---------------------------
@@ -106,6 +107,16 @@ function MovieCard({
       } block relative rounded-xl overflow-hidden shadow-lg group transition-transform duration-300 hover:scale-105 hover:shadow-2xl`}
     >
       <div className="relative aspect-[2/3] bg-slate-200 dark:bg-gray-800">
+      <button
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowModal(true);
+  }}
+  className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded z-20"
+>
+  + List
+</button>
         <img
           src={imageUrl || "https://via.placeholder.com/300x450"}
           alt={title}
@@ -125,6 +136,7 @@ function MovieCard({
             </span>
           )}
         </div>
+
 
 {finalBadge && (
   <div
@@ -146,7 +158,17 @@ function MovieCard({
    <ScoreCircle score={finalScoreNumber} color={finalColor} />
           </div>
         )}
-
+<AddToListModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  movie={{
+    id,
+    title,
+    name: title,
+    poster_path: imageUrl,
+    media_type: isTV || type === "tv" ? "tv" : "movie",
+  }}
+/>
         {location.pathname === "/unclespick" && isAdmin && onDelete && (
           <button
             onClick={handleAdminDelete}

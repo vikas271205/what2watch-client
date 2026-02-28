@@ -69,7 +69,7 @@ function Navbar() {
           <Link to="/genres" className="hover:text-indigo-500">Genres</Link>
           <Link to="/watchlist" className="hover:text-indigo-500">Watchlist</Link>
           <Link to="/tvshows" className="hover:text-indigo-500">TV Shows</Link>
-
+          <Link to="/following">Following</Link>
           <Link to="/unclespick" className="hover:text-indigo-400">
             Uncle's Pick
           </Link>

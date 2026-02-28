@@ -6,7 +6,7 @@ import TVSection from "../components/TVSection";
 import NowPlayingIndiaSection from "../components/NowPlayingIndiaSection";
 import HiddenGemSection from "../components/HiddenGemSection";
 import Footer from "../components/Footer";
-
+import CommunityListsSection from "../components/CommunityListSection";
 function Home() {
   return (
     <main className="min-h-screen bg-background">
@@ -32,7 +32,7 @@ function Home() {
         <NowPlayingIndiaSection />
 
         {/* Editorial */}
-        <HiddenGemSection />
+        <CommunityListsSection />
 
       </div>
 

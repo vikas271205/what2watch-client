@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayCircle, Tv, Bookmark, Play } from "lucide-react";
 import { addToWatchHistory } from "../utils/watchHistory";
 import { computeUncleScore } from "../utils/uncleScoreEngine";
+import AddToListModal from "../components/AddToListModal";
 
 const formatRuntime = (mins) => {
     if (!mins || typeof mins !== 'number' || mins <= 0) return null;
@@ -215,7 +216,7 @@ function TVDetail() {
     const [castLoaded, setCastLoaded] = useState(false);
     const [relatedLoaded, setRelatedLoaded] = useState(false);
     const [seasonLoaded, setSeasonLoaded] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
     const [userRating, setUserRating] = useState(0);

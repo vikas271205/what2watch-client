@@ -4,14 +4,97 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- WATCHLISTS ---
-match /watchlists/{watchlistId} {
-  allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-  allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-  allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    match /watchlists/{watchlistId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // --- USER LISTS SYSTEM ---
+    match /lists/{listId} {
+match /comments/{commentId} {
+
+  allow read: if true;
+
+  allow create: if request.auth != null;
+
+  allow delete: if request.auth != null &&
+    (
+      resource.data.userId == request.auth.uid
+      ||
+      request.auth.uid ==
+        get(/databases/$(database)/documents/lists/$(listId)).data.ownerId
+    );
+}
+allow read: if true;
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+
+allow update: if request.auth != null
+  && (
+       resource.data.ownerId == request.auth.uid
+       ||
+       request.resource.data.diff(resource.data).changedKeys()
+         .hasOnly(["likesCount", "savesCount"])
+     );
+
+      allow delete: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid;
+
+      // Items
+      match /items/{itemId} {
+        allow read: if
+          get(/databases/$(database)/documents/lists/$(listId)).data.isPublic == true
+          ||
+          (request.auth != null &&
+           get(/databases/$(database)/documents/lists/$(listId)).data.ownerId == request.auth.uid);
+
+        allow create, update, delete: if
+          request.auth != null &&
+          get(/databases/$(database)/documents/lists/$(listId)).data.ownerId == request.auth.uid;
+      }
+
+      // Activity
+      match /activity/{activityId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+    }
+
+    // --- USERS ROOT ---
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+
+
+match /savedLists/{listId} {
+  allow read, write: if request.auth != null
+                     && request.auth.uid == userId;
 }
 
+match /likedLists/{listId} {
+  allow read: if request.auth != null
+              && request.auth.uid == userId;
+  allow write: if request.auth != null
+               && request.auth.uid == userId;
+}
 
-    // --- OTHER RULES (UNCHANGED and CORRECT) ---
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if request.auth != null
+                     && request.auth.uid == followerId;
+      }
+
+      match /following/{targetUserId} {
+        allow read: if true;
+        allow write: if request.auth != null
+                     && request.auth.uid == userId;
+      }
+    }
+
+    // --- OTHER RULES (UNCHANGED) ---
     match /ratings/{ratingId} {
       allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
     }
@@ -29,4 +112,3 @@ match /watchlists/{watchlistId} {
     }
   }
 }
-

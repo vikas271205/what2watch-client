@@ -12,18 +12,19 @@ import UnclesPick from "./pages/UnclesPick";
 import Genres from "./pages/Genres";
 import CastDetail from "./pages/CastDetail";
 import Trending from "./pages/Trending";
-
+import CreateList from "./pages/CreateList";
 import AdminRecommend from "./pages/AdminRecommend";
 import AdminRoute from "./components/AdminRoute";
 import { LoadingProvider } from "./context/LoadingContext";
-
+import ListDetail from "./pages/ListDetail";
 // --- Assuming your ThemeLayout is structured like this ---
 // --- I've added the fixes directly into this component ---
 import { Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar"; 
 import Footer from "./components/Footer"; 
-
-
+import DiscoverLists from "./pages/DiscoverLists";
+import UserProfile from "./pages/UserProfile";
+import FollowingFeed from "./pages/FollowingFeed";
 
 function ThemeLayout() {
   return (
@@ -59,6 +60,11 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/person/:id" element={<CastDetail />} />
           <Route path="/trending" element={<Trending />} />
+          <Route path="/create-list" element={<CreateList />} />
+          <Route path="/list/:id" element={<ListDetail />} />
+          <Route path="/discover-lists" element={<DiscoverLists />} />
+          <Route path="/user/:userId" element={<UserProfile />} />
+          <Route path="/following" element={<FollowingFeed />} />
           <Route
             path="/admin/recommend"
             element={

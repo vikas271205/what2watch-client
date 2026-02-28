@@ -9,10 +9,12 @@ export default function useAdminClaim() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const tokenResult = await user.getIdTokenResult(true); // force refresh
-        // console.log("🔐 Claims:", tokenResult.claims); // ✅ ADD THIS
-        setIsAdmin(tokenResult.claims.isAdmin === true); // ✅ matches your actual claim
-
+        try {
+  const tokenResult = await user.getIdTokenResult(true);
+  setIsAdmin(tokenResult.claims.isAdmin === true);
+} catch (error) {
+  setIsAdmin(false);
+}
       } else {
         setIsAdmin(false);
       }

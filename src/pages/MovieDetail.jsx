@@ -18,6 +18,7 @@ import { Star, Trash2, Users, Clapperboard, Film, MessageSquare, Sparkles, PlayC
 import { addToWatchHistory } from "../utils/watchHistory";
 import MovieInfoPanel from "../components/MovieInfoPanel";
 import { computeUncleScore} from "../utils/uncleScoreEngine";
+import AddToListModal from "../components/AddToListModal";
 // In-memory AI cache for instantly revisiting a movie page
 const aiLocalCache = {};
 
@@ -168,7 +169,7 @@ function MovieDetail() {
     const [relatedMovies, setRelatedMovies] = useState([]);
     const [castLoaded, setCastLoaded] = useState(false);
     const [relatedLoaded, setRelatedLoaded] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
     const [streamingSources, setStreamingSources] = useState([]);
     const [omdbRatings, setOmdbRatings] = useState({ imdb: null, rt: null, uncle: null });
     const [ageRating, setAgeRating] = useState(null);
