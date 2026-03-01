@@ -40,7 +40,9 @@ dark: {
 },
 };
 
-const [isDark, setIsDark] = useState(
+// ================= DARK MODE SYNC FIX =================
+
+const [isDark, setIsDark] = useState(() =>
   document.documentElement.classList.contains("dark")
 );
 
@@ -58,6 +60,8 @@ useEffect(() => {
 }, []);
 
 const theme = isDark ? themes.dark : themes.light;
+
+// ======================================================
   const [list, setList] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -178,8 +182,68 @@ const theme = isDark ? themes.dark : themes.light;
     }));
   };
 
+  const Skeleton = () => {
+    const skeletonColor = `rgba(${theme.primary},0.15)`;
+
+    return (
+      <div className="animate-pulse">
+        {/* Header Skeleton */}
+        <div className="max-w-6xl mx-auto px-6 pt-16">
+          <div className="rounded-2xl p-10 backdrop-blur-xl border">
+            <div className="flex flex-col md:flex-row gap-10">
+              <div
+                className="w-64 h-96 rounded-xl"
+                style={{ backgroundColor: skeletonColor }}
+              />
+              <div className="flex-1 space-y-4">
+                <div
+                  className="h-8 w-2/3 rounded"
+                  style={{ backgroundColor: skeletonColor }}
+                />
+                <div
+                  className="h-4 w-1/4 rounded"
+                  style={{ backgroundColor: skeletonColor }}
+                />
+                <div
+                  className="h-4 w-3/4 rounded"
+                  style={{ backgroundColor: skeletonColor }}
+                />
+                <div
+                  className="h-10 w-40 rounded-full"
+                  style={{ backgroundColor: skeletonColor }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Grid Skeleton */}
+        <div className="max-w-6xl mx-auto px-6 mt-16 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div
+              key={i}
+              className="aspect-[2/3] rounded-xl"
+              style={{ backgroundColor: skeletonColor }}
+            />
+          ))}
+        </div>
+
+        {/* Comments Skeleton */}
+        <div className="max-w-4xl mx-auto mt-20 px-6 space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-16 rounded-xl"
+              style={{ backgroundColor: skeletonColor }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (loading)
-    return <div className="p-10 text-center">Loading...</div>;
+    return <Skeleton/>;
   if (!list)
     return <div className="p-10 text-center">List not found</div>;
 
